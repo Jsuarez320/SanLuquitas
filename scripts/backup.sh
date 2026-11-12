@@ -48,4 +48,15 @@ echo "  ✔ config-secretos.tar.gz"
 find "$DESTINO_BASE" -mindepth 1 -maxdepth 1 -type d -mtime +$RETENCION_DIAS -exec rm -rf {} +
 echo "  ✔ Rotación aplicada (se conservan $RETENCION_DIAS días)"
 
+# 7. Copia cifrada en Google Drive (restic + rclone)
+export RESTIC_REPOSITORY=rclone:gdrive:sanluquitas-backups
+export RESTIC_PASSWORD_FILE="$HOME/.config/restic/password"
+
+restic backup "$DEST" --tag sanluquitas --host sanluquitas-srv --quiet
+echo "  ✔ Subido a Google Drive (cifrado)"
+
+# Retención en la nube: 7 diarios, 4 semanales, 3 mensuales
+restic forget --tag sanluquitas --keep-daily 7 --keep-weekly 4 --keep-monthly 3 --prune --quiet
+echo "  ✔ Retención en la nube aplicada"
+
 echo "[$(date '+%F %T')] Respaldo completado: $(du -sh "$DEST" | cut -f1)"
