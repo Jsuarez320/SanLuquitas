@@ -20,9 +20,9 @@
         ];
     @endphp
 
-    <div x-data="{ abierto: false }" class="lg:flex">
-        {{-- Barra lateral --}}
-        <aside class="on-dark fixed inset-y-0 left-0 z-40 w-64 -translate-x-full bg-primary-dark transition-transform lg:static lg:translate-x-0"
+    <div x-data="{ abierto: false }" class="min-h-screen lg:flex">
+        {{-- Barra lateral: fija a pantalla completa (en escritorio se queda al hacer scroll) --}}
+        <aside class="on-dark fixed inset-y-0 left-0 z-40 w-64 -translate-x-full overflow-y-auto bg-primary-dark transition-transform lg:sticky lg:top-0 lg:h-screen lg:shrink-0 lg:translate-x-0"
                :class="{ 'translate-x-0': abierto }">
             <div class="flex h-16 items-center gap-2 px-5">
                 <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-accent font-heading font-bold text-primary-dark">SL</span>

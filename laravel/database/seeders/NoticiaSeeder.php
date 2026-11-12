@@ -43,16 +43,45 @@ class NoticiaSeeder extends Seeder
                     'Más de 100 familias participaron en el taller sobre uso responsable de la tecnología y seguridad en internet.',
                     'Los asistentes recibieron una guía con recomendaciones y recursos para aplicar en casa.',
                 ]],
+            // Para probar el panel: comunicados, borradores y una publicación programada.
+            ['comunicado-horario-semana-santa', 'Horario especial por Semana Santa', 'comunicado', 'Institucional', '2026-11-05',
+                'Informamos los días sin actividades académicas y el reintegro a clases.', [
+                    'Estimadas familias: durante la Semana Santa no habrá actividades académicas ni servicio de transporte.',
+                    'Las clases se reanudan con normalidad el lunes siguiente en el horario habitual.',
+                ]],
+            ['comunicado-reunion-padres-noviembre', 'Reunión general de padres de familia', 'comunicado', 'Comunidad', '2026-11-10',
+                'Citación para la entrega de informes del cuarto periodo.', [
+                    'Se convoca a todos los padres de familia a la reunión general de entrega de informes del cuarto periodo.',
+                    'La asistencia es importante: se compartirán los resultados y las recomendaciones para el cierre del año.',
+                ]],
+            ['borrador-ceremonia-graduacion-2026', 'Ceremonia de graduación 2026', 'noticia', 'Institucional', '2026-11-20',
+                'Detalles de la ceremonia de grado de los estudiantes de undécimo.', [
+                    'Estamos preparando la ceremonia de graduación de la promoción 2026. Pronto compartiremos fecha, lugar y programa.',
+                    'Pendiente: confirmar invitados y horario con la rectoría.',
+                ], 'borrador'],
+            ['borrador-nuevo-laboratorio-robotica', 'Nuevo laboratorio de robótica', 'noticia', 'Académico', '2026-11-25',
+                'El colegio estrena un espacio dedicado a la robótica y la programación.', [
+                    'Con el apoyo de la comunidad educativa inauguramos un laboratorio de robótica equipado para todos los niveles.',
+                    'Texto en revisión: falta agregar fotos y el calendario de uso.',
+                ], 'borrador'],
+            ['programada-feria-del-libro-2027', 'Feria del libro 2027', 'noticia', 'Comunidad', '2027-03-15',
+                'Anunciamos la próxima feria del libro con invitados especiales.', [
+                    'La feria del libro volverá en marzo con talleres de lectura, autores invitados y venta de libros.',
+                    'Esta publicación está programada y se verá en el sitio a partir de su fecha.',
+                ]],
         ];
 
-        foreach ($noticias as [$slug, $titulo, $tipo, $categoria, $fecha, $extracto, $parrafos]) {
+        foreach ($noticias as $fila) {
+            // El 8.º valor (estado) es opcional: por defecto "publicado".
+            [$slug, $titulo, $tipo, $categoria, $fecha, $extracto, $parrafos, $estado] = array_pad($fila, 8, 'publicado');
+
             Noticia::firstOrCreate(['slug' => $slug], [
                 'titulo' => $titulo,
                 'tipo' => $tipo,
                 'categoria' => $categoria,
                 'extracto' => $extracto,
                 'cuerpo' => implode("\n\n", $parrafos),
-                'estado' => 'publicado',
+                'estado' => $estado,
                 'publicada_en' => $fecha,
             ]);
         }
