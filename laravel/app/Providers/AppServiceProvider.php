@@ -23,6 +23,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Port de LOGIN_RATE_LIMIT de SmartPark: 5 intentos cada 15 minutos por IP.
-        RateLimiter::for('admin-login', fn (Request $request) => Limit::perMinutes(15, 5)->by($request->ip()));
+        RateLimiter::for('admin-login', fn (Request $request) => Limit::perMinutes(1, 5)->by($request->ip()));
     }
 }
