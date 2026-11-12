@@ -12,14 +12,20 @@ class DatabaseSeeder extends Seeder
 
     /**
      * Seed the application's database.
+     * Crea el primer administrador (credenciales configurables por .env).
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        User::updateOrCreate(
+            ['username' => env('ADMIN_USERNAME', 'admin')],
+            [
+                'name' => 'Administrador',
+                'apellido' => 'Sistema',
+                'email' => env('ADMIN_EMAIL', 'admin@sanluquitas.test'),
+                'password' => env('ADMIN_PASSWORD', 'Cambiar123'),
+                'es_admin' => true,
+                'activo' => true,
+            ],
+        );
     }
 }
