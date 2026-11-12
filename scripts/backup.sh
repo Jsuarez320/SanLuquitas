@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 # Respaldo de San Luquitas Digital: Moodle (MariaDB + moodledata) y Laravel (PostgreSQL + storage)
-# Copia 1: local en /opt/backups (7 días) | Copia 2: cifrada en Google Drive con restic
 set -euo pipefail
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 PROYECTO=/opt/sanluquitas
 DESTINO_BASE=/opt/backups
@@ -28,15 +26,13 @@ docker compose exec -T laravel-db sh -c \
   | gzip > "$DEST/laravel-db.sql.gz"
 echo "  ✔ laravel-db.sql.gz"
 
-# 3. Archivos de Moodle (volumen moodledata), sin cachés regenerables.
-#    El contenedor corre como root: al final entrega el archivo al usuario del host.
+# 3. Archivos de Moodle (volumen moodledata), sin cachés regenerables
 docker run --rm \
   -v sanluquitas_moodledata:/data:ro \
   -v "$DEST":/backup \
-  alpine sh -c "tar czf /backup/moodledata.tar.gz -C /data \
+  alpine tar czf /backup/moodledata.tar.gz -C /data \
     --exclude=./cache --exclude=./localcache --exclude=./temp \
-    --exclude=./sessions --exclude=./trashdir . \
-    && chown $(id -u):$(id -g) /backup/moodledata.tar.gz"
+    --exclude=./sessions --exclude=./trashdir .
 echo "  ✔ moodledata.tar.gz"
 
 # 4. Archivos subidos al portal Laravel
@@ -48,18 +44,8 @@ tar czf "$DEST/config-secretos.tar.gz" .env laravel/.env
 chmod 600 "$DEST"/*
 echo "  ✔ config-secretos.tar.gz"
 
-# 6. Rotación local: borrar respaldos con más de N días
+# 6. Rotación: borrar respaldos con más de N días
 find "$DESTINO_BASE" -mindepth 1 -maxdepth 1 -type d -mtime +$RETENCION_DIAS -exec rm -rf {} +
-echo "  ✔ Rotación local aplicada (se conservan $RETENCION_DIAS días)"
-
-# 7. Copia cifrada en Google Drive (restic + rclone)
-export RESTIC_REPOSITORY=rclone:gdrive:sanluquitas-backups
-export RESTIC_PASSWORD_FILE="$HOME/.config/restic/password"
-
-restic backup "$DEST" --tag sanluquitas --host sanluquitas-srv --quiet
-echo "  ✔ Subido a Google Drive (cifrado)"
-
-restic forget --tag sanluquitas --keep-daily 7 --keep-weekly 4 --keep-monthly 3 --prune --quiet
-echo "  ✔ Retención en la nube aplicada"
+echo "  ✔ Rotación aplicada (se conservan $RETENCION_DIAS días)"
 
 echo "[$(date '+%F %T')] Respaldo completado: $(du -sh "$DEST" | cut -f1)"
