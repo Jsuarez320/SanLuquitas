@@ -1,0 +1,66 @@
+name: sanluquitas
+
+services:
+  # ======================== MOODLE ========================
+  moodle-db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${MOODLE_DB_NAME}
+      MARIADB_USER: ${MOODLE_DB_USER}
+      MARIADB_PASSWORD: ${MOODLE_DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MOODLE_DB_ROOT_PASSWORD}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - moodle_db:/var/lib/mysql
+    networks: [moodle]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      retries: 10
+
+  moodle-app:
+    build: ./moodle
+    image: sanluquitas/moodle-php:8.3
+    restart: unless-stopped
+    environment: &moodle_env
+      MOODLE_HOST: ${MOODLE_HOST}
+      MOODLE_DB_NAME: ${MOODLE_DB_NAME}
+      MOODLE_DB_USER: ${MOODLE_DB_USER}
+      MOODLE_DB_PASSWORD: ${MOODLE_DB_PASSWORD}
+    volumes: &moodle_vols
+      - ./moodle/src:/var/www/moodle:ro
+      - ./moodle/config.php:/var/www/moodle/config.php:ro
+      - moodledata:/var/moodledata
+    networks: [moodle]
+    depends_on:
+      moodle-db:
+        condition: service_healthy
+
+  moodle-cron:
+    image: sanluquitas/moodle-php:8.3
+    restart: unless-stopped
+    user: www-data
+    environment: *moodle_env
+    volumes: *moodle_vols
+    networks: [moodle]
+    command: sh -c "while true; do php ${MOODLE_CLI}/cron.php; sleep 60; done"
+    depends_on: [moodle-app]
+
+  moodle-web:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./moodle/src:/var/www/moodle:ro
+      - ./moodle/nginx/moodle.conf:/etc/nginx/conf.d/default.conf:ro
+    networks: [moodle]
+    depends_on: [moodle-app]
+
+networks:
+  moodle:
+
+volumes:
+  moodle_db:
+  moodledata:
