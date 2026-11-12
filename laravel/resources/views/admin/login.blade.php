@@ -7,7 +7,7 @@
 @endphp
 
 @section('content')
-    <div class="mx-auto mt-12 w-full max-w-sm">
+    <div class="mx-auto mt-12 w-full max-w-sm motion-safe:animate-fade-up">
         <div class="mb-8 text-center">
             <span class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary font-heading text-2xl font-bold text-white">SL</span>
             <h1 class="font-heading text-2xl font-bold text-primary-dark">Administración</h1>

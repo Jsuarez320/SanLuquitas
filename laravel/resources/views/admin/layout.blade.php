@@ -15,6 +15,7 @@
     @php
         $menu = [
             ['Panel', 'admin.dashboard', 'admin.dashboard', 'computer-desktop'],
+            ['Noticias', 'admin.noticias.index', 'admin.noticias.*', 'newspaper'],
             ['Usuarios', 'admin.usuarios.index', 'admin.usuarios.*', 'users'],
         ];
     @endphp
@@ -32,8 +33,8 @@
                 @foreach ($menu as [$texto, $ruta, $patron, $icono])
                     @php $activo = request()->routeIs($patron); @endphp
                     <a href="{{ route($ruta) }}" @if ($activo) aria-current="page" @endif
-                       class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition {{ $activo ? 'bg-white/15 text-white' : 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
-                        <x-icon :name="$icono" class="h-5 w-5" /> {{ $texto }}
+                       class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition duration-200 {{ $activo ? 'bg-white/15 text-white' : 'text-blue-100 hover:translate-x-1 hover:bg-white/10 hover:text-white' }}">
+                        <x-icon :name="$icono" class="h-5 w-5 transition group-hover:scale-110 {{ $activo ? 'text-accent' : '' }}" /> {{ $texto }}
                     </a>
                 @endforeach
                 <a href="{{ route('inicio') }}" target="_blank" rel="noopener"
@@ -66,17 +67,18 @@
                 </div>
             </header>
 
-            <main class="p-4 sm:p-6 lg:p-8">
-                @include('admin.partials.alertas')
+            <main class="p-4 motion-safe:animate-fade-in sm:p-6 lg:p-8">
                 @yield('content')
             </main>
         </div>
     </div>
 @else
     <main class="p-4">
-        @include('admin.partials.alertas')
         @yield('content')
     </main>
 @endauth
+
+@include('admin.partials.alertas')
+@include('admin.partials.confirmar-eliminar')
 </body>
 </html>

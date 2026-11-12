@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\NoticiaController as AdminNoticiaController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\NewsController;
 use App\Http\Controllers\PageController;
@@ -37,5 +38,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/usuarios/crear', [AdminUserController::class, 'create'])->name('usuarios.create');
         Route::post('/usuarios', [AdminUserController::class, 'store'])->name('usuarios.store');
         Route::patch('/usuarios/{usuario}/activo', [AdminUserController::class, 'toggleActivo'])->name('usuarios.activo');
+
+        Route::resource('noticias', AdminNoticiaController::class)->except('show');
+        Route::patch('/noticias/{noticia}/estado', [AdminNoticiaController::class, 'toggleEstado'])->name('noticias.estado');
     });
 });
