@@ -1,0 +1,1436 @@
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * JavaScript module for the Simple course format.
+ *
+ * Handles section navigation, outcomes popout, top nav hover reveal,
+ * smooth transitions, and keyboard navigation.
+ *
+ * @module     format_simple/simple
+ * @copyright  2025 South African Theological Seminary <ict@sats.ac.za>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+define([
+    'core/ajax',
+    'core/str',
+    'core/templates',
+    'core_course/events',
+], function(Ajax, Str, Templates, CourseEvents) {
+    'use strict';
+
+    /** @type {HTMLElement} Root element. */
+    let root = null;
+
+    /** @type {Object} Pre-loaded language strings. */
+    var langStrings = {};
+
+    /** @type {number} Currently active section number. */
+    let activeSection = 0;
+
+    /** @type {boolean} Whether we are in editing mode. */
+    let isEditing = false;
+
+    /** @type {boolean} Whether the nav is open on mobile. */
+    let navOpen = false;
+
+    /** @type {number|null} Timer ID for nav auto-collapse. */
+    let collapseTimer = null;
+
+    /** @type {number} Delay in ms before nav collapses. */
+    const COLLAPSE_DELAY = 3000;
+
+    /** @type {Set<string>} Module view events already raised this session. */
+    const viewedUrls = new Set();
+
+    /** @type {Map<HTMLElement, number>} Pending dwell timers keyed by observed element. */
+    const dwellTimers = new Map();
+
+    /** @type {number} Time in ms content must stay visible before its view event is raised. */
+    const VIEW_DWELL = 3000;
+
+    /** @type {number} Fraction of the content that must be visible to start the dwell timer. */
+    const VIEW_VISIBLE_RATIO = 0.25;
+
+    /** @type {number} Circumference of the progress ring (2 * PI * r=16). */
+    const CIRCUMFERENCE = 2 * Math.PI * 16;
+
+    /** @type {number|null} Timer ID for drawer auto-hide. */
+    let drawerHideTimer = null;
+
+    /** @type {number} Delay in ms before drawer auto-hides. */
+    const DRAWER_HIDE_DELAY = 3000;
+
+    /**
+     * Initialise the Simple format interactions.
+     *
+     * @param {string} rootId The ID of the root element.
+     */
+    const init = function(rootId) {
+        root = document.getElementById(rootId);
+        if (!root) {
+            return;
+        }
+
+        // Pre-load language strings for interactive elements. Completion strings come from
+        // core along with its completion markup.
+        Str.get_strings([
+            {key: 'togglefullscreen', component: 'format_simple'},
+            {key: 'exitfullscreen', component: 'format_simple'},
+        ]).then(function(strings) {
+            langStrings.togglefullscreen = strings[0];
+            langStrings.exitfullscreen = strings[1];
+            return;
+        }).catch(function() {
+            // Fallback to English.
+            langStrings.togglefullscreen = 'Toggle fullscreen';
+            langStrings.exitfullscreen = 'Exit fullscreen';
+        });
+
+        isEditing = root.dataset.editing === 'true';
+        activeSection = parseInt(root.dataset.activesection, 10) || 0;
+
+        // Cog nav is loaded globally via cognav.js on all course pages.
+        // No need to call it here — it runs independently.
+
+        // Subpanel tolerance applies globally (editing and view mode).
+        setupSubpanelTolerance();
+
+        // Detect modules that inject inline content via JS (e.g. mod_syllabus).
+        setupInlineContentDetection();
+
+        if (isEditing) {
+            // Editing mode: all sections visible, nav scrolls to sections.
+            setupEditingNavigation();
+            setupOutcomesPopovers();
+            setupZoneGrouping();
+            setupManualCompletion();
+            setupEmbedFullscreen();
+            setupIndexActivityLinks();
+        } else {
+            // View mode: single-section display with transitions.
+            setupNavigation();
+            setupNavCollapse();
+            setupOutcomesPopovers();
+            setupTopNavHover();
+            setupKeyboardNav();
+            setupMobileNav();
+            setupDrawerAutoHide();
+            setupZoneGrouping();
+            setupManualCompletion();
+            setupEmbedFullscreen();
+            setupIndexActivityLinks();
+            restoreFromHash();
+
+            // Trigger view completion for inline pages in the initially active section.
+            triggerViewCompletion(activeSection);
+        }
+    };
+
+    /**
+     * Set up section navigation click handlers.
+     */
+    const setupNavigation = function() {
+        const navItems = root.querySelectorAll('.simple-nav-item');
+
+        navItems.forEach(function(item) {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                // Don't navigate to restricted sections (unless editing).
+                if (item.classList.contains('is-restricted') && item.getAttribute('aria-disabled') === 'true') {
+                    return;
+                }
+
+                const sectionNum = parseInt(item.dataset.section, 10);
+                if (sectionNum === activeSection) {
+                    return;
+                }
+
+                switchSection(sectionNum);
+            });
+        });
+    };
+
+    /**
+     * Set up navigation for editing mode.
+     *
+     * In editing mode all sections are visible on the page.
+     * Clicking a nav item smoothly scrolls to the corresponding section.
+     * An IntersectionObserver tracks which section is in view and
+     * highlights the corresponding nav item automatically.
+     */
+    const setupEditingNavigation = function() {
+        const navItems = root.querySelectorAll('.simple-nav-item');
+
+        // Click handler — scroll to section.
+        navItems.forEach(function(item) {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                var sectionNum = parseInt(item.dataset.section, 10);
+                var target = root.querySelector('#simple-section-' + sectionNum);
+                if (!target) {
+                    return;
+                }
+
+                // Smooth scroll to the section.
+                target.scrollIntoView({behavior: 'smooth', block: 'start'});
+            });
+        });
+
+        // Scroll-spy — observe sections entering the viewport and
+        // highlight the corresponding nav item.
+        var sections = root.querySelectorAll('.simple-section');
+        if (!sections.length) {
+            return;
+        }
+
+        // Track which sections are currently intersecting.
+        var visibleSections = new Map();
+
+        var updateActiveNav = function() {
+            // Pick the topmost visible section (smallest boundingClientRect.top).
+            var best = null;
+            var bestTop = Infinity;
+            visibleSections.forEach(function(top, num) {
+                if (top < bestTop) {
+                    bestTop = top;
+                    best = num;
+                }
+            });
+
+            if (best === null) {
+                return;
+            }
+
+            navItems.forEach(function(ni) {
+                var num = parseInt(ni.dataset.section, 10);
+                ni.classList.toggle('is-active', num === best);
+                ni.setAttribute('aria-current', num === best ? 'true' : 'false');
+            });
+        };
+
+        var observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                var num = parseInt(entry.target.dataset.section, 10);
+                if (entry.isIntersecting) {
+                    visibleSections.set(num, entry.boundingClientRect.top);
+                } else {
+                    visibleSections.delete(num);
+                }
+            });
+            updateActiveNav();
+        }, {
+            // Fire when at least 10% of the section is in view.
+            threshold: 0,
+            rootMargin: '-10% 0px -80% 0px'
+        });
+
+        sections.forEach(function(section) {
+            observer.observe(section);
+        });
+    };
+
+    /**
+     * Switch to a different section with a smooth transition.
+     *
+     * @param {number} sectionNum The section number to switch to.
+     */
+    const switchSection = function(sectionNum) {
+        const currentSection = root.querySelector('.simple-section.is-active');
+        const targetSection = root.querySelector('#simple-section-' + sectionNum);
+
+        if (!targetSection) {
+            return;
+        }
+
+        // Update navigation state.
+        const navItems = root.querySelectorAll('.simple-nav-item');
+        navItems.forEach(function(item) {
+            const num = parseInt(item.dataset.section, 10);
+            item.classList.toggle('is-active', num === sectionNum);
+            item.setAttribute('aria-current', num === sectionNum ? 'true' : 'false');
+        });
+        showIndexActivitiesFor(sectionNum);
+
+        // Transition: fade out current, fade in target.
+        if (currentSection && currentSection !== targetSection) {
+            currentSection.style.opacity = '0';
+            currentSection.style.transform = 'translateX(-8px)';
+
+            setTimeout(function() {
+                currentSection.classList.remove('is-active');
+                currentSection.hidden = true;
+                currentSection.style.opacity = '';
+                currentSection.style.transform = '';
+
+                targetSection.hidden = false;
+                targetSection.classList.add('is-active');
+                targetSection.style.opacity = '0';
+                targetSection.style.transform = 'translateX(8px)';
+
+                // Force reflow before animating in.
+                void targetSection.offsetHeight;
+
+                targetSection.style.transition = 'opacity 500ms cubic-bezier(0.4, 0, 0.2, 1), '
+                    + 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1)';
+                targetSection.style.opacity = '1';
+                targetSection.style.transform = 'translateX(0)';
+
+                setTimeout(function() {
+                    targetSection.style.transition = '';
+                    targetSection.style.opacity = '';
+                    targetSection.style.transform = '';
+                }, 510);
+            }, 400);
+        } else if (!currentSection) {
+            targetSection.hidden = false;
+            targetSection.classList.add('is-active');
+        }
+
+        activeSection = sectionNum;
+
+        // Trigger view completion for inline pages in the new section.
+        triggerViewCompletion(sectionNum);
+
+        // Update URL hash.
+        if (window.history && window.history.replaceState) {
+            window.history.replaceState(null, '', '#section-' + sectionNum);
+        }
+
+        // Close mobile nav after selection.
+        if (navOpen) {
+            toggleMobileNav();
+        }
+
+        // Restart collapse timer after interaction.
+        var nav = root.querySelector('.simple-nav');
+        if (nav) {
+            startCollapseTimer(nav);
+        }
+
+        // Scroll content to top.
+        const content = root.querySelector('.simple-content');
+        if (content) {
+            content.scrollTop = 0;
+        }
+    };
+
+    /**
+     * Set up auto-collapse of the navigation panel.
+     *
+     * After 5 seconds of inactivity the nav slides down to show only
+     * progress indicators. Hovering expands it again.
+     */
+    const setupNavCollapse = function() {
+        const nav = root.querySelector('.simple-nav');
+        if (!nav) {
+            return;
+        }
+
+        // Start the initial collapse timer.
+        startCollapseTimer(nav);
+
+        // Expand on mouse enter.
+        nav.addEventListener('mouseenter', function() {
+            clearTimeout(collapseTimer);
+            nav.classList.remove('is-collapsed');
+        });
+
+        // Re-start collapse timer on mouse leave.
+        nav.addEventListener('mouseleave', function() {
+            startCollapseTimer(nav);
+        });
+    };
+
+    /**
+     * Start (or restart) the nav collapse timer.
+     *
+     * @param {HTMLElement} nav The navigation element.
+     */
+    const startCollapseTimer = function(nav) {
+        clearTimeout(collapseTimer);
+        collapseTimer = setTimeout(function() {
+            nav.classList.add('is-collapsed');
+        }, COLLAPSE_DELAY);
+    };
+
+    /**
+     * Set up outcomes popout toggle buttons.
+     */
+    const setupOutcomesPopovers = function() {
+        const buttons = root.querySelectorAll('[data-action="toggle-outcomes"]');
+
+        buttons.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const sectionNum = btn.dataset.section;
+                const panel = root.querySelector('#simple-outcomes-panel-' + sectionNum);
+
+                if (!panel) {
+                    return;
+                }
+
+                const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+                btn.setAttribute('aria-expanded', !isExpanded);
+
+                if (isExpanded) {
+                    panel.hidden = true;
+                } else {
+                    panel.hidden = false;
+                }
+            });
+        });
+
+        // Close outcomes panel when clicking outside.
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.simple-outcomes-btn') && !e.target.closest('.simple-outcomes-panel')) {
+                const openButtons = root.querySelectorAll('[data-action="toggle-outcomes"][aria-expanded="true"]');
+                openButtons.forEach(function(btn) {
+                    btn.setAttribute('aria-expanded', 'false');
+                    const sectionNum = btn.dataset.section;
+                    const panel = root.querySelector('#simple-outcomes-panel-' + sectionNum);
+                    if (panel) {
+                        panel.hidden = true;
+                    }
+                });
+            }
+        });
+    };
+
+    /**
+     * Set up the top navigation hover reveal zone for the breadcrumb.
+     * Hovering the top edge or the navbar reveals the breadcrumb;
+     * leaving hides it after a 3-second delay.
+     */
+    const setupTopNavHover = function() {
+        // Create a hover trigger zone at the very top of the page.
+        const triggerZone = document.createElement('div');
+        triggerZone.className = 'simple-topnav-trigger';
+        triggerZone.style.cssText = 'position:fixed;top:0;left:0;right:0;height:8px;z-index:9999;';
+
+        var hideTimer = null;
+
+        var showNav = function() {
+            if (hideTimer) {
+                clearTimeout(hideTimer);
+                hideTimer = null;
+            }
+            document.body.classList.add('simple-topnav-visible');
+        };
+
+        var hideNav = function(e) {
+            var related = e.relatedTarget;
+            if (related && (
+                triggerZone.contains(related) ||
+                (navbar && navbar.contains(related))
+            )) {
+                return;
+            }
+            if (hideTimer) {
+                clearTimeout(hideTimer);
+            }
+            hideTimer = setTimeout(function() {
+                document.body.classList.remove('simple-topnav-visible');
+                hideTimer = null;
+            }, 3000);
+        };
+
+        triggerZone.addEventListener('mouseenter', showNav);
+        triggerZone.addEventListener('mouseleave', hideNav);
+
+        var navbar = document.getElementById('page-navbar');
+        if (navbar) {
+            navbar.addEventListener('mouseenter', showNav);
+            navbar.addEventListener('mouseleave', hideNav);
+        }
+
+        document.body.appendChild(triggerZone);
+    };
+
+    /**
+     * Set up keyboard navigation between units.
+     */
+    const setupKeyboardNav = function() {
+        root.addEventListener('keydown', function(e) {
+            // Only respond when focus is in the nav panel.
+            if (!e.target.closest('.simple-nav')) {
+                return;
+            }
+
+            const navItems = Array.from(root.querySelectorAll('.simple-nav-item:not(.is-restricted)'));
+            const currentIndex = navItems.indexOf(e.target);
+
+            if (currentIndex === -1) {
+                return;
+            }
+
+            let targetIndex = -1;
+
+            switch (e.key) {
+                case 'ArrowDown':
+                    e.preventDefault();
+                    targetIndex = Math.min(currentIndex + 1, navItems.length - 1);
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    targetIndex = Math.max(currentIndex - 1, 0);
+                    break;
+                case 'Home':
+                    e.preventDefault();
+                    targetIndex = 0;
+                    break;
+                case 'End':
+                    e.preventDefault();
+                    targetIndex = navItems.length - 1;
+                    break;
+                case 'Enter':
+                case ' ':
+                    e.preventDefault();
+                    e.target.click();
+                    return;
+            }
+
+            if (targetIndex >= 0 && targetIndex !== currentIndex) {
+                navItems[targetIndex].focus();
+            }
+        });
+    };
+
+    /** @type {number} Breakpoint width at which mobile header appears. */
+    const MOBILE_BREAKPOINT = 1024;
+
+    /**
+     * Set up mobile navigation toggle.
+     *
+     * Only creates the mobile header bar when the viewport is at or below the
+     * tablet breakpoint. Listens for resize events to add/remove it dynamically.
+     */
+    const setupMobileNav = function() {
+        var mobileHeader = null;
+
+        var createMobileHeader = function() {
+            if (mobileHeader) {
+                return;
+            }
+            var pageHeading = document.querySelector('#page-header h1, #page-header .h2');
+            var coursetitle = pageHeading ? pageHeading.textContent.trim() : '';
+            Templates.render('format_simple/local/mobile_header', {coursetitle: coursetitle})
+                .then(function(html) {
+                    var temp = document.createElement('div');
+                    temp.innerHTML = html;
+                    mobileHeader = temp.firstElementChild;
+                    var toggleBtn = mobileHeader.querySelector('.simple-mobile-nav-toggle');
+                    if (toggleBtn) {
+                        toggleBtn.addEventListener('click', toggleMobileNav);
+                    }
+                    var nav = root.querySelector('.simple-nav');
+                    if (nav) {
+                        root.insertBefore(mobileHeader, nav);
+                    }
+                    return;
+                })
+                .catch(function() {
+                    // Silently fail — mobile header is non-critical.
+                });
+        };
+
+        var removeMobileHeader = function() {
+            if (!mobileHeader) {
+                return;
+            }
+            mobileHeader.remove();
+            mobileHeader = null;
+
+            // Ensure nav is visible when switching back to desktop.
+            var nav = root.querySelector('.simple-nav');
+            if (nav) {
+                nav.classList.remove('is-open');
+                navOpen = false;
+            }
+        };
+
+        var handleResize = function() {
+            if (window.innerWidth <= MOBILE_BREAKPOINT) {
+                createMobileHeader();
+            } else {
+                removeMobileHeader();
+            }
+        };
+
+        handleResize();
+        window.addEventListener('resize', handleResize);
+    };
+
+    /**
+     * Toggle mobile navigation visibility.
+     */
+    const toggleMobileNav = function() {
+        const nav = root.querySelector('.simple-nav');
+        if (!nav) {
+            return;
+        }
+
+        navOpen = !navOpen;
+        nav.classList.toggle('is-open', navOpen);
+
+        const toggleBtn = root.querySelector('.simple-mobile-nav-toggle');
+        if (toggleBtn) {
+            toggleBtn.setAttribute('aria-expanded', navOpen);
+        }
+    };
+
+    /**
+     * Set up auto-hide for the right blocks drawer.
+     *
+     * When the drawer is opened, it will close itself after DRAWER_HIDE_DELAY ms
+     * of no mouse activity. Uses Boost's own close mechanism to avoid state conflicts.
+     */
+    const setupDrawerAutoHide = function() {
+        var drawer = document.querySelector('.drawer.drawer-right');
+        if (!drawer) {
+            return;
+        }
+
+        // Observe class changes to detect when Boost opens/closes the drawer.
+        var observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.attributeName === 'class') {
+                    if (drawer.classList.contains('show')) {
+                        startDrawerHideTimer(drawer);
+                    } else {
+                        clearTimeout(drawerHideTimer);
+                    }
+                }
+            });
+        });
+
+        observer.observe(drawer, {attributes: true, attributeFilter: ['class']});
+
+        // Cancel auto-hide while the user is interacting with the drawer.
+        drawer.addEventListener('mouseenter', function() {
+            clearTimeout(drawerHideTimer);
+        });
+
+        // Restart timer when the mouse leaves the drawer.
+        drawer.addEventListener('mouseleave', function() {
+            if (drawer.classList.contains('show')) {
+                startDrawerHideTimer(drawer);
+            }
+        });
+    };
+
+    /**
+     * Start the drawer auto-hide timer.
+     *
+     * Closes the drawer through Boost's own close button to keep state in sync.
+     *
+     * @param {HTMLElement} drawer The drawer element.
+     */
+    const startDrawerHideTimer = function(drawer) {
+        clearTimeout(drawerHideTimer);
+        drawerHideTimer = setTimeout(function() {
+            var closeBtn = drawer.querySelector('[data-action="closedrawer"]');
+            if (closeBtn) {
+                closeBtn.click();
+            }
+        }, DRAWER_HIDE_DELAY);
+    };
+
+    /**
+     * Set up zone grouping for DnD compatibility.
+     *
+     * Moodle's reactive editor _fixOrder() pulls all [data-for="cmitem"] elements
+     * out of any nested containers and appends them flat to the cmlist. This
+     * destroys our zone structure. We use a MutationObserver to detect when
+     * this happens and re-group items back behind their zone headers based
+     * on each item's data-zone attribute.
+     */
+    const setupZoneGrouping = function() {
+        var cmlists = root.querySelectorAll('.simple-cmlist[data-for="cmlist"]');
+        cmlists.forEach(function(cmlist) {
+            var observer = new MutationObserver(function() {
+                // Disconnect before making DOM changes to prevent infinite loop.
+                observer.disconnect();
+                // Delay slightly to let all core reactive updates finish.
+                setTimeout(function() {
+                    regroupZones(cmlist);
+                    // Reconnect after our DOM changes are complete.
+                    observer.observe(cmlist, {childList: true});
+                }, 50);
+            });
+
+            observer.observe(cmlist, {childList: true});
+        });
+    };
+
+    /** @type {string[]} Zone order for regrouping. */
+    var ZONE_ORDER = ['learning', 'resources', 'activities'];
+
+    /**
+     * Re-group cmitems behind their zone headers.
+     *
+     * Collects all [data-for="cmitem"] elements, groups them by data-zone,
+     * and inserts them after the corresponding [data-zone-header] element.
+     * Zone headers with no children are hidden. Skips DOM work if items
+     * are already in the correct order.
+     *
+     * @param {HTMLElement} cmlist The cmlist container.
+     */
+    const regroupZones = function(cmlist) {
+        var headers = {};
+        var items = {};
+
+        // Collect zone headers.
+        ZONE_ORDER.forEach(function(zone) {
+            headers[zone] = cmlist.querySelector('[data-zone-header="' + zone + '"]');
+            items[zone] = [];
+        });
+
+        // A label introduces whatever follows it, so it travels with that item rather than
+        // belonging to a zone. Read the pairing from the DOM as it stands, so that a label the
+        // teacher has just dragged keeps the position they dropped it in.
+        var labelsFor = new Map();
+        var pendingLabels = [];
+        Array.from(cmlist.children).forEach(function(child) {
+            if (child.getAttribute('data-for') !== 'cmitem') {
+                return;
+            }
+            if (child.getAttribute('data-zone') === 'label') {
+                pendingLabels.push(child);
+                return;
+            }
+            if (pendingLabels.length) {
+                labelsFor.set(child, pendingLabels);
+                pendingLabels = [];
+            }
+        });
+        // Labels left at the end have nothing to introduce, so they stay at the end.
+        var trailingLabels = pendingLabels;
+
+        // Collect all cmitems and group by zone.
+        var allItems = cmlist.querySelectorAll('[data-for="cmitem"]');
+        allItems.forEach(function(item) {
+            var zone = item.getAttribute('data-zone');
+            if (zone === 'label') {
+                return;
+            }
+            if (zone && items[zone]) {
+                items[zone].push(item);
+            } else {
+                // Items without a zone go to activities by default.
+                items.activities.push(item);
+            }
+        });
+
+        // Build desired order of children.
+        var desiredOrder = [];
+        ZONE_ORDER.forEach(function(zone) {
+            if (headers[zone]) {
+                desiredOrder.push(headers[zone]);
+            }
+            items[zone].forEach(function(item) {
+                (labelsFor.get(item) || []).forEach(function(label) {
+                    desiredOrder.push(label);
+                });
+                desiredOrder.push(item);
+            });
+        });
+        trailingLabels.forEach(function(label) {
+            desiredOrder.push(label);
+        });
+
+        // Collect remaining non-cmitem, non-header children (e.g. sectioninfo).
+        var remaining = Array.from(cmlist.children).filter(function(child) {
+            return !child.hasAttribute('data-zone-header') && child.getAttribute('data-for') !== 'cmitem';
+        });
+        remaining.forEach(function(child) {
+            desiredOrder.push(child);
+        });
+
+        // Check if already in correct order — skip DOM work if so.
+        var currentChildren = Array.from(cmlist.children);
+        if (currentChildren.length === desiredOrder.length) {
+            var inOrder = true;
+            for (var i = 0; i < currentChildren.length; i++) {
+                if (currentChildren[i] !== desiredOrder[i]) {
+                    inOrder = false;
+                    break;
+                }
+            }
+            if (inOrder) {
+                // Just update header visibility and return.
+                ZONE_ORDER.forEach(function(zone) {
+                    if (headers[zone]) {
+                        headers[zone].hidden = (items[zone].length === 0);
+                    }
+                });
+                return;
+            }
+        }
+
+        // Rebuild the cmlist in zone order.
+        var fragment = document.createDocumentFragment();
+        desiredOrder.forEach(function(child) {
+            fragment.appendChild(child);
+        });
+        cmlist.appendChild(fragment);
+
+        // Update header visibility.
+        ZONE_ORDER.forEach(function(zone) {
+            if (headers[zone]) {
+                headers[zone].hidden = (items[zone].length === 0);
+            }
+        });
+    };
+
+    /**
+     * Record a course module's completion state and redraw its section's progress ring.
+     *
+     * @param {HTMLElement} el An element inside the course module's wrapper.
+     * @param {boolean} complete The new completion state.
+     */
+    const applyCompletionState = function(el, complete) {
+        markCompletionState(el, complete ? 'complete' : 'incomplete');
+
+        var sectionEl = el.closest('.simple-section');
+        var sNum = sectionEl ? parseInt(sectionEl.dataset.section, 10) : -1;
+        if (sNum >= 0) {
+            refreshSectionProgress(sNum);
+        }
+    };
+
+    /**
+     * Wire up manual completion.
+     *
+     * Two sources feed the same state. Activity cards carry this format's compact indicator,
+     * which has to be a span so that it can live inside the card's link, so its clicks are
+     * handled here. Content rendered in place carries core's button, which core re-renders
+     * itself and announces with a bubbling event; there we only follow along.
+     */
+    const setupManualCompletion = function() {
+        // Core's button, beneath content rendered in place.
+        root.addEventListener(CourseEvents.manualCompletionToggled, function(e) {
+            applyCompletionState(e.target, !!e.detail.completed);
+        });
+
+        // This format's compact indicator on activity cards.
+        root.addEventListener('click', function(e) {
+            var dot = e.target.closest('[data-action="toggle-completion"]');
+            if (dot) {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleCardCompletion(dot);
+            }
+        });
+
+        // The indicator is a checkbox, so it must answer to the keyboard as well.
+        root.addEventListener('keydown', function(e) {
+            if (e.key !== ' ' && e.key !== 'Enter') {
+                return;
+            }
+            var dot = e.target.closest('[data-action="toggle-completion"]');
+            if (dot) {
+                e.preventDefault();
+                toggleCardCompletion(dot);
+            }
+        });
+    };
+
+    /**
+     * Toggle an activity card's manual completion indicator.
+     *
+     * @param {HTMLElement} dot The indicator element.
+     */
+    const toggleCardCompletion = function(dot) {
+        if (dot.dataset.busy === '1') {
+            return;
+        }
+        dot.dataset.busy = '1';
+
+        var cmid = parseInt(dot.dataset.cmid, 10);
+        var complete = !dot.classList.contains('is-complete');
+
+        // Show the new state straight away, then put it back if the server disagrees.
+        var paint = function(state) {
+            dot.classList.toggle('is-complete', state);
+            dot.setAttribute('aria-checked', state ? 'true' : 'false');
+            applyCompletionState(dot, state);
+        };
+        paint(complete);
+
+        Ajax.call([{
+            methodname: 'core_completion_update_activity_completion_status_manually',
+            args: {cmid: cmid, completed: complete},
+            done: function() {
+                delete dot.dataset.busy;
+            },
+            fail: function() {
+                paint(!complete);
+                delete dot.dataset.busy;
+            }
+        }]);
+    };
+
+    /**
+     * Raise a module's view event once its content has actually been seen.
+     *
+     * Content shown in place is never opened through the activity's own view.php, so the view
+     * event that ordinarily records the visit and satisfies view based completion never fires.
+     * Each module exposes a mod_<name>_view_<name> web service that raises exactly that event.
+     *
+     * The call is made only once the content has been in the viewport continuously for
+     * VIEW_DWELL ms, so that merely rendering a section off screen does not mark it read.
+     *
+     * @param {HTMLElement} el The element carrying the view service attributes.
+     * @param {number} sectionNum The section the element belongs to.
+     */
+    const raiseViewEvent = function(el, sectionNum) {
+        var service = el.getAttribute('data-viewservice');
+        var param = el.getAttribute('data-viewparam');
+        var instance = parseInt(el.getAttribute('data-viewinstance'), 10);
+        if (!service || !param || !instance) {
+            return;
+        }
+
+        var key = service + ':' + instance;
+        if (viewedUrls.has(key)) {
+            return;
+        }
+        viewedUrls.add(key);
+
+        // Each module names its instance parameter after itself, so it is supplied by the server.
+        var args = {};
+        args[param] = instance;
+
+        Ajax.call([{
+            methodname: service,
+            args: args,
+            done: function() {
+                markCompletionState(el, 'complete');
+                refreshSectionProgress(sectionNum);
+            },
+            fail: function() {
+                // Allow a later attempt, for instance after the student returns to the section.
+                viewedUrls.delete(key);
+            }
+        }]);
+    };
+
+    /**
+     * Record a course module's completion state for the section progress ring.
+     *
+     * @param {HTMLElement} el An element inside the course module's wrapper.
+     * @param {string} state Either complete or incomplete.
+     */
+    const markCompletionState = function(el, state) {
+        var wrapper = el.closest('[data-for="cmitem"]');
+        if (!wrapper) {
+            return;
+        }
+        var region = wrapper.querySelector('[data-completion-tracked="1"]');
+        if (region) {
+            region.setAttribute('data-completion-state', state);
+        }
+        var inline = wrapper.querySelector('.simple-inline-content, .simple-embed-container');
+        if (inline) {
+            inline.classList.toggle('is-complete', state === 'complete');
+        }
+
+        // The index lists the same activities, so it has to follow along.
+        var cmid = wrapper.getAttribute('data-id');
+        if (cmid) {
+            var entry = root.querySelector('.simple-nav-cmlink[data-cmid="' + cmid + '"]');
+            if (entry) {
+                entry.setAttribute('data-completion-state', state);
+                var dot = entry.querySelector('.simple-cm-dot');
+                if (dot) {
+                    dot.classList.toggle('is-complete', state === 'complete');
+                }
+            }
+        }
+    };
+
+    /**
+     * Reveal the index's activity list for one unit and hide the rest.
+     *
+     * Only the unit being viewed lists its activities, so the panel stays a list of units.
+     *
+     * @param {number} sectionNum The section whose list should be shown.
+     */
+    const showIndexActivitiesFor = function(sectionNum) {
+        var lists = root.querySelectorAll('[data-for="navcmlist"]');
+        lists.forEach(function(list) {
+            var isactive = parseInt(list.dataset.section, 10) === sectionNum;
+            list.classList.toggle('is-active', isactive);
+            list.hidden = !isactive;
+        });
+    };
+
+    /**
+     * Let an index entry take the reader to its activity.
+     *
+     * The unit is already on the page, so this scrolls to the activity rather than following a
+     * link away from it.
+     */
+    const setupIndexActivityLinks = function() {
+        root.addEventListener('click', function(e) {
+            var link = e.target.closest('[data-action="scroll-to-cm"]');
+            if (!link) {
+                return;
+            }
+            e.preventDefault();
+
+            var target = root.querySelector('#module-' + link.dataset.cmid);
+            if (!target) {
+                return;
+            }
+            target.scrollIntoView({behavior: 'smooth', block: 'center'});
+            // A brief highlight, so it is obvious which one was meant.
+            target.classList.add('is-flagged');
+            setTimeout(function() {
+                target.classList.remove('is-flagged');
+            }, 1600);
+        });
+    };
+
+    /**
+     * Watch a section's in-place content and raise view events once it has been seen.
+     *
+     * @param {number} sectionNum The section number to check.
+     */
+    const triggerViewCompletion = function(sectionNum) {
+        var section = root.querySelector('#simple-section-' + sectionNum);
+        if (!section) {
+            return;
+        }
+
+        var viewables = section.querySelectorAll('[data-viewservice]');
+        if (!viewables.length) {
+            return;
+        }
+
+        // Without IntersectionObserver, fall back to raising the events straight away.
+        if (typeof IntersectionObserver === 'undefined') {
+            viewables.forEach(function(el) {
+                raiseViewEvent(el, sectionNum);
+            });
+            return;
+        }
+
+        var observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                var el = entry.target;
+                if (entry.isIntersecting) {
+                    // Start the dwell timer; it is cleared if the content leaves again.
+                    dwellTimers.set(el, setTimeout(function() {
+                        dwellTimers.delete(el);
+                        observer.unobserve(el);
+                        raiseViewEvent(el, sectionNum);
+                    }, VIEW_DWELL));
+                } else if (dwellTimers.has(el)) {
+                    clearTimeout(dwellTimers.get(el));
+                    dwellTimers.delete(el);
+                }
+            });
+        }, {threshold: VIEW_VISIBLE_RATIO});
+
+        viewables.forEach(function(el) {
+            if (!viewedUrls.has(el.getAttribute('data-viewservice') + ':'
+                    + parseInt(el.getAttribute('data-viewinstance'), 10))) {
+                observer.observe(el);
+            }
+        });
+    };
+
+    /**
+     * Refresh the nav progress indicator for a section with animation.
+     *
+     * Counts completion items in the section DOM and animates the
+     * percentage count-up and arc fill over 1 second.
+     *
+     * @param {number} sectionNum The section number.
+     */
+    const refreshSectionProgress = function(sectionNum) {
+        // Section 0 has an info icon, not a progress indicator.
+        if (sectionNum === 0) {
+            return;
+        }
+
+        var section = root.querySelector('#simple-section-' + sectionNum);
+        var navItem = root.querySelector('.simple-nav-item[data-section="' + sectionNum + '"]');
+        if (!section || !navItem) {
+            return;
+        }
+
+        var indicator = navItem.querySelector('.simple-nav-indicator');
+        if (!indicator) {
+            return;
+        }
+
+        // Count trackable items from our own state attributes rather than from core's
+        // completion markup, whose shape is not ours to depend on.
+        var trackedItems = section.querySelectorAll('[data-completion-tracked="1"]');
+        var total = trackedItems.length;
+        if (total === 0) {
+            return;
+        }
+
+        var completed = 0;
+        trackedItems.forEach(function(el) {
+            if (el.getAttribute('data-completion-state') === 'complete') {
+                completed++;
+            }
+        });
+
+        var targetPct = Math.round((completed / total) * 100);
+
+        // Determine current percentage from the existing SVG.
+        var currentPct = 0;
+        var existingText = indicator.querySelector('.simple-progress-text');
+        if (existingText) {
+            currentPct = parseInt(existingText.textContent, 10) || 0;
+        } else if (indicator.querySelector('.is-complete')) {
+            currentPct = 100;
+        }
+
+        if (currentPct === targetPct) {
+            return;
+        }
+
+        animateProgress(indicator, currentPct, targetPct);
+    };
+
+    /**
+     * Animate the progress indicator from one percentage to another.
+     *
+     * Builds an in-progress SVG and uses requestAnimationFrame to
+     * smoothly animate the arc fill and percentage text over 1 second.
+     * At 100% swaps to the complete check SVG; at 0% swaps to empty circle.
+     *
+     * @param {HTMLElement} indicator The .simple-nav-indicator element.
+     * @param {number} fromPct Starting percentage.
+     * @param {number} toPct Target percentage.
+     */
+    const animateProgress = function(indicator, fromPct, toPct) {
+        var duration = 1000;
+        var ns = 'http://www.w3.org/2000/svg';
+
+        // Build an in-progress SVG for the animation.
+        var svg = document.createElementNS(ns, 'svg');
+        svg.setAttribute('class', 'simple-progress-svg is-inprogress');
+        svg.setAttribute('viewBox', '0 0 36 36');
+        svg.setAttribute('width', '36');
+        svg.setAttribute('height', '36');
+
+        var bgCircle = document.createElementNS(ns, 'circle');
+        bgCircle.setAttribute('class', 'simple-progress-bg');
+        bgCircle.setAttribute('cx', '18');
+        bgCircle.setAttribute('cy', '18');
+        bgCircle.setAttribute('r', '16');
+        bgCircle.setAttribute('fill', 'none');
+        bgCircle.setAttribute('stroke', '#e5e7eb');
+        bgCircle.setAttribute('stroke-width', '2.5');
+
+        var progressBar = document.createElementNS(ns, 'circle');
+        progressBar.setAttribute('class', 'simple-progress-bar');
+        progressBar.setAttribute('cx', '18');
+        progressBar.setAttribute('cy', '18');
+        progressBar.setAttribute('r', '16');
+        progressBar.setAttribute('fill', 'none');
+        progressBar.setAttribute('stroke', '#10b981');
+        progressBar.setAttribute('stroke-width', '2.5');
+        progressBar.setAttribute('stroke-linecap', 'round');
+        progressBar.setAttribute('stroke-dasharray', CIRCUMFERENCE);
+        progressBar.setAttribute('transform', 'rotate(-90 18 18)');
+
+        var text = document.createElementNS(ns, 'text');
+        text.setAttribute('x', '18');
+        text.setAttribute('y', '21');
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('class', 'simple-progress-text');
+
+        svg.appendChild(bgCircle);
+        svg.appendChild(progressBar);
+        svg.appendChild(text);
+
+        // Set initial state and replace indicator content.
+        var initOffset = CIRCUMFERENCE * (1 - fromPct / 100);
+        progressBar.setAttribute('stroke-dashoffset', initOffset);
+        text.textContent = fromPct + '%';
+        indicator.innerHTML = '';
+        indicator.appendChild(svg);
+
+        var startTime = null;
+        var animate = function(timestamp) {
+            if (!startTime) {
+                startTime = timestamp;
+            }
+            var elapsed = timestamp - startTime;
+            var progress = Math.min(elapsed / duration, 1);
+            // Ease-out cubic for smooth deceleration.
+            var eased = 1 - Math.pow(1 - progress, 3);
+
+            var currentPct = Math.round(fromPct + (toPct - fromPct) * eased);
+            var dashoffset = CIRCUMFERENCE * (1 - currentPct / 100);
+
+            progressBar.setAttribute('stroke-dashoffset', dashoffset);
+            text.textContent = currentPct + '%';
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // Animation done — show final SVG state.
+                if (toPct >= 100) {
+                    Templates.render('format_simple/local/progress_complete', {})
+                        .then(function(html) {
+                            indicator.innerHTML = html;
+                            return;
+                        })
+                        .catch(function() {
+                            // Keep current state on failure.
+                        });
+                } else if (toPct <= 0) {
+                    Templates.render('format_simple/local/progress_empty', {})
+                        .then(function(html) {
+                            indicator.innerHTML = html;
+                            return;
+                        })
+                        .catch(function() {
+                            // Keep current state on failure.
+                        });
+                }
+            }
+        };
+
+        requestAnimationFrame(animate);
+    };
+
+    /**
+     * Set up fullscreen toggle buttons on embed containers.
+     *
+     * Uses the Browser Fullscreen API to fullscreen the .simple-embed-container
+     * element. Saves and restores scroll position for seamless return.
+     */
+    const setupEmbedFullscreen = function() {
+        var savedScrollY = 0;
+
+        root.addEventListener('click', function(e) {
+            var btn = e.target.closest('[data-action="toggle-fullscreen"]');
+            if (!btn) {
+                return;
+            }
+            e.preventDefault();
+            e.stopPropagation();
+
+            var container = btn.closest('.simple-embed-container');
+            if (!container) {
+                return;
+            }
+
+            if (document.fullscreenElement === container ||
+                document.webkitFullscreenElement === container) {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+            } else {
+                savedScrollY = window.scrollY || window.pageYOffset;
+                if (container.requestFullscreen) {
+                    container.requestFullscreen();
+                } else if (container.webkitRequestFullscreen) {
+                    container.webkitRequestFullscreen();
+                }
+            }
+        });
+
+        var onFullscreenChange = function() {
+            var fsElement = document.fullscreenElement || document.webkitFullscreenElement || null;
+
+            var buttons = root.querySelectorAll('[data-action="toggle-fullscreen"]');
+            buttons.forEach(function(btn) {
+                var container = btn.closest('.simple-embed-container');
+                var icon = btn.querySelector('i');
+                if (!icon) {
+                    return;
+                }
+                if (container === fsElement) {
+                    icon.className = 'fa fa-compress';
+                    btn.setAttribute('aria-label', langStrings.exitfullscreen);
+                } else {
+                    icon.className = 'fa fa-expand';
+                    btn.setAttribute('aria-label', langStrings.togglefullscreen);
+                }
+            });
+
+            if (!fsElement) {
+                window.scrollTo(0, savedScrollY);
+            }
+        };
+
+        document.addEventListener('fullscreenchange', onFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+    };
+
+    /**
+     * Fix subpanel flyout menus (e.g. Availability) closing too quickly.
+     *
+     * Moodle's subpanel JS hides the flyout immediately on mouseout from
+     * the trigger item. When moving the cursor diagonally toward the flyout,
+     * the cursor often crosses the next menu item below the trigger, which
+     * fires mouseout with a relatedTarget outside the subpanel — causing
+     * an instant close.
+     *
+     * This fix intercepts mouseout in the capture phase (before Moodle's
+     * handler) and adds a 400ms grace period. If the cursor reaches the
+     * flyout content or re-enters the trigger within that window, the
+     * hide is cancelled.
+     */
+    const setupSubpanelTolerance = function() {
+        document.addEventListener('mouseout', function(e) {
+            // Find the subpanel trigger (.dropdown-item) being left.
+            var menuItem = e.target.closest
+                ? e.target.closest('.format-simple .dropdown-subpanel > .dropdown-item')
+                : null;
+            if (!menuItem) {
+                return;
+            }
+
+            var subpanel = menuItem.closest('.dropdown-subpanel');
+            var content = subpanel ? subpanel.querySelector('.dropdown-subpanel-content') : null;
+            if (!content || !content.classList.contains('show')) {
+                return;
+            }
+
+            var related = e.relatedTarget;
+            // If moving directly into the panel content or staying in the trigger, Moodle handles it fine.
+            if (related && (menuItem.contains(related) || content.contains(related))) {
+                return;
+            }
+
+            // Prevent Moodle's handler from hiding immediately.
+            e.stopImmediatePropagation();
+
+            // Give the user 400ms to reach the flyout.
+            clearTimeout(subpanel._spHideTimer);
+            subpanel._spHideTimer = setTimeout(function() {
+                if (content.classList.contains('show')) {
+                    content.classList.remove('show');
+                    subpanel.classList.remove('content-displayed');
+                    menuItem.setAttribute('aria-expanded', 'false');
+                }
+            }, 400);
+
+            // Cancel the delayed hide if cursor reaches the content or re-enters the trigger.
+            var cleanup = function() {
+                clearTimeout(subpanel._spHideTimer);
+                content.removeEventListener('mouseenter', cleanup);
+                menuItem.removeEventListener('mouseenter', cleanup);
+            };
+            content.addEventListener('mouseenter', cleanup);
+            menuItem.addEventListener('mouseenter', cleanup);
+        }, true); // Capture phase — fires BEFORE Moodle's bubble-phase handler.
+    };
+
+    /**
+     * Hide activity cards when a module injects inline content.
+     *
+     * Some modules (e.g. mod_syllabus with inline display) append their
+     * rendered content to the cmitem wrapper via JavaScript after page load.
+     * Since this happens outside our Mustache template, the card link is
+     * already present. A MutationObserver detects when new children are
+     * added to a cmitem and hides the card to prevent overlap.
+     *
+     * Runs on ALL sections (not just section 0) and also covers content
+     * inside hidden containers (e.g. pre-rendered section 0 modal HTML).
+     */
+    const setupInlineContentDetection = function() {
+        // Watch all cmitems across the entire root, including hidden containers.
+        var cmitems = root.querySelectorAll('[data-for="cmitem"]');
+        watchCmitemsForInlineContent(cmitems);
+    };
+
+    /**
+     * Set up MutationObservers on a set of cmitem elements to detect inline content.
+     *
+     * @param {NodeList|Array} cmitems The cmitem elements to watch.
+     */
+    const watchCmitemsForInlineContent = function(cmitems) {
+        cmitems.forEach(function(cmitem) {
+            // Skip if already being watched.
+            if (cmitem.dataset.inlineWatched) {
+                return;
+            }
+            cmitem.dataset.inlineWatched = '1';
+
+            // If already has extra content beyond the card and edit controls, hide the card now.
+            hideCardIfInlineContent(cmitem);
+
+            // Watch for future DOM additions (modules that load content async).
+            var observer = new MutationObserver(function() {
+                hideCardIfInlineContent(cmitem);
+            });
+            observer.observe(cmitem, {childList: true, subtree: true});
+        });
+    };
+
+    /**
+     * Hide the activity card inside a cmitem if it contains injected inline content.
+     *
+     * @param {HTMLElement} cmitem The [data-for="cmitem"] wrapper element.
+     */
+    const hideCardIfInlineContent = function(cmitem) {
+        var card = cmitem.querySelector('.simple-cm-card');
+        if (!card) {
+            return;
+        }
+
+        // Check for children that are NOT the card and NOT the edit controls.
+        var children = cmitem.children;
+        for (var i = 0; i < children.length; i++) {
+            var child = children[i];
+            if (child === card || child.classList.contains('simple-cm-edit')) {
+                continue;
+            }
+            // Found injected content — hide the card.
+            card.style.display = 'none';
+            return;
+        }
+    };
+
+    /**
+     * Restore active section from URL hash.
+     */
+    const restoreFromHash = function() {
+        const hash = window.location.hash;
+        if (!hash) {
+            return;
+        }
+
+        const match = hash.match(/^#section-(\d+)$/);
+        if (match) {
+            const sectionNum = parseInt(match[1], 10);
+            if (sectionNum !== activeSection) {
+                switchSection(sectionNum);
+            }
+        }
+    };
+
+    return {
+        init: init
+    };
+});

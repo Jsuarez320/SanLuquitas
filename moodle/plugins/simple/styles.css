@@ -1,0 +1,4383 @@
+/**
+ * Styles for format_simple.
+ *
+ * All selectors are scoped under the .format-simple body class to prevent
+ * style leakage into other parts of the Moodle site. Moodle applies this
+ * body class automatically when this course format is active.
+ *
+ * @package    format_simple
+ * @copyright  2025 South African Theological Seminary <ict@sats.ac.za>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+/* =========================================================================
+   Design Tokens
+   ========================================================================= */
+
+.format-simple .format-simple-wrapper {
+    --simple-bg: #eef2ff;
+    --simple-surface: #fff;
+    --simple-text: #1a1a1a;
+    --simple-text-secondary: #6b7280;
+    --simple-text-muted: #9ca3af;
+    --simple-border: #e5e7eb;
+    --simple-border-light: #f3f4f6;
+    --simple-accent: #2563eb;
+    --simple-accent-light: #dbeafe;
+    --simple-success: #10b981;
+    --simple-success-light: #d1fae5;
+    --simple-warning: #f59e0b;
+    --simple-danger: #ef4444;
+    --simple-radius: 12px;
+    --simple-radius-sm: 8px;
+    --simple-radius-lg: 16px;
+    --simple-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+    --simple-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.03);
+    --simple-shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.08), 0 4px 10px rgba(0, 0, 0, 0.04);
+    --simple-transition: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+    --simple-transition-fast: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    --simple-transition-slow: 600ms cubic-bezier(0.4, 0, 0.2, 1);
+    --simple-nav-width: 280px;
+    --simple-nav-collapsed-width: 60px;
+    --simple-nav-collapse-speed: 1.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    --simple-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* =========================================================================
+   Global Overrides — Hide Moodle Chrome for Clean Experience
+   ========================================================================= */
+
+
+/* Hide the page context header — redundant in this format. */
+body.format-simple .page-context-header {
+    display: none;
+}
+
+/* Secondary navigation is hidden via JS in setupSecondaryNav() after
+   the cog popover is built. No CSS rule needed — this ensures subpages
+   (participants, settings, grades) keep their standard nav. */
+
+/* ---- Cog Popover (course tools) ---- */
+
+.format-simple .simple-cog-container {
+    position: fixed;
+    top: 70px;
+    left: 0;
+    z-index: 1040;
+}
+
+.format-simple .simple-home-btn {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border: none;
+    border-radius: 0 10px 10px 0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+    font-size: 1.25rem;
+    color: #6b7280;
+    cursor: pointer;
+    transition: color 200ms, background 200ms;
+    text-decoration: none;
+    margin-top: 6px;
+}
+
+.format-simple .simple-home-btn:hover {
+    color: #2563eb;
+    background: #f0f4ff;
+    text-decoration: none;
+}
+
+/* Section 0 modal trigger button. */
+.format-simple .simple-s0-modal-btn {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border: none;
+    border-radius: 0 10px 10px 0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+    font-size: 1.25rem;
+    color: #6b7280;
+    cursor: pointer;
+    transition: color 200ms, background 200ms;
+    margin-top: 6px;
+}
+
+.format-simple .simple-s0-modal-btn:hover {
+    color: #2563eb;
+    background: #f0f4ff;
+}
+
+/* Section 0 modal backdrop. */
+.format-simple .simple-s0-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0);
+    transition: background 400ms cubic-bezier(0.4, 0, 0.2, 1), backdrop-filter 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    display: none;
+}
+
+.format-simple .simple-s0-modal-backdrop.is-open {
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+}
+
+/* Section 0 modal panel. */
+.format-simple .simple-s0-modal {
+    position: fixed;
+    top: 5vh;
+    left: 5vw;
+    right: 5vw;
+    bottom: 5vh;
+    z-index: 1051;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+    display: none;
+    flex-direction: column;
+    transform: translateY(30px) scale(0.97);
+    opacity: 0;
+    transition: transform 400ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.format-simple .simple-s0-modal.is-open {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+/* Modal close button. */
+.format-simple .simple-s0-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 10;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.05);
+    border: none;
+    border-radius: 50%;
+    font-size: 1.25rem;
+    color: #6b7280;
+    cursor: pointer;
+    transition: background 200ms, color 200ms;
+}
+
+.format-simple .simple-s0-modal-close:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: #111827;
+}
+
+/* Modal body — scrollable content area. */
+.format-simple .simple-s0-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px;
+    padding-top: 60px;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Loading spinner inside the modal. */
+.format-simple .simple-s0-modal-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+}
+
+/* Mobile adjustments for the modal. */
+@media (max-width: 768px) {
+    .format-simple .simple-s0-modal {
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: 0;
+    }
+
+    .format-simple .simple-s0-modal-body {
+        padding: 20px;
+    }
+}
+
+.format-simple .simple-cog-btn {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border: none;
+    border-radius: 0 10px 10px 0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+    font-size: 1.25rem;
+    color: #6b7280;
+    cursor: pointer;
+    transition: color 200ms, background 200ms, transform 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.format-simple .simple-cog-btn:hover {
+    color: #2563eb;
+    background: #f0f4ff;
+}
+
+.format-simple .simple-cog-btn.is-open {
+    color: #2563eb;
+    background: #dbeafe;
+}
+
+.format-simple .simple-cog-btn.is-open i {
+    display: inline-block;
+    transform: rotate(90deg);
+    transition: transform 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.format-simple .simple-cog-btn i {
+    transition: transform 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Popover panel — slides out from the cog. */
+.format-simple .simple-cog-popover {
+    position: absolute;
+    top: 0;
+    left: 48px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 10px rgba(0, 0, 0, 0.06);
+    padding: 16px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-12px);
+    transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1), transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 340px;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+}
+
+.format-simple .simple-cog-popover.is-open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+}
+
+/* Tile heading. */
+.format-simple .simple-cog-heading {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 10px 4px;
+}
+
+/* Tile grid. */
+.format-simple .simple-cog-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+
+/* Individual tile. */
+.format-simple .simple-cog-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 8px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: #f9fafb;
+    color: #374151;
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-align: center;
+    line-height: 1.3;
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.format-simple .simple-cog-tile:hover {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    text-decoration: none;
+}
+
+.format-simple .simple-cog-tile:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+.format-simple .simple-cog-tile.is-active {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+}
+
+.format-simple .simple-cog-tile-icon {
+    font-size: 1.25rem;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.format-simple .simple-cog-tile.is-active .simple-cog-tile-icon {
+    background: #2563eb;
+    color: #fff;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+}
+
+.format-simple .simple-cog-tile-img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    border-radius: 3px;
+}
+
+/* Hide the course navigation breadcrumb — reveal on hover. */
+.format-simple #page-navbar {
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity var(--simple-transition), transform var(--simple-transition);
+    pointer-events: none;
+}
+
+.format-simple #page-navbar:hover,
+.format-simple #page-header:hover ~ #page-navbar,
+.format-simple.simple-topnav-visible #page-navbar {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+/* Ensure hover zone extends to catch mouse movement. */
+.format-simple #page-navbar::before {
+    content: "";
+    display: block;
+    height: 24px;
+    position: absolute;
+    top: -24px;
+    left: 0;
+    right: 0;
+}
+
+/* Hide the course index drawer since we have our own nav. */
+body.format-simple .courseindex {
+    display: none;
+}
+
+/* Tone down the page header when not needed. */
+.format-simple #page-content {
+    padding-top: 0;
+}
+
+/* Full-width layout — remove Moodle's default container padding. */
+.format-simple #topofscroll.main-inner {
+    padding: 0;
+    max-width: none;
+}
+
+.format-simple #page.drawers {
+    padding: 0;
+}
+
+.format-simple #page-content .region-main-box {
+    padding: 0;
+}
+
+.format-simple #region-main {
+    padding: 0;
+    border: none;
+    background: transparent;
+}
+
+.format-simple #page-content .region-main {
+    padding: 0;
+}
+
+.format-simple .course-content {
+    margin: 0;
+    padding: 0;
+    max-width: none;
+}
+
+/* Remove the page header excess spacing. */
+.format-simple #page-header {
+    max-width: none;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+/* Hide the LEFT drawer toggle (course index) — we have our own nav.
+   Keep the RIGHT drawer toggle (blocks) visible. */
+body.format-simple .drawer-toggler.drawer-left-toggle {
+    display: none;
+}
+
+/* Style the right drawer toggle to match our design. */
+.format-simple .drawer-toggler.drawer-right-toggle .btn {
+    border-color: var(--simple-border);
+    color: var(--simple-text-secondary);
+    transition: all var(--simple-transition-fast);
+}
+
+.format-simple .drawer-toggler.drawer-right-toggle .btn:hover {
+    border-color: var(--simple-accent);
+    color: var(--simple-accent);
+    box-shadow: var(--simple-shadow);
+}
+
+/* ---- Right Drawer Smooth Animation ---- */
+
+body.format-simple .drawer.drawer-right {
+    transition:
+        right 600ms cubic-bezier(0.25, 0.1, 0.25, 1),
+        transform 600ms cubic-bezier(0.25, 0.1, 0.25, 1),
+        margin-right 600ms cubic-bezier(0.25, 0.1, 0.25, 1),
+        visibility 600ms cubic-bezier(0.25, 0.1, 0.25, 1),
+        box-shadow 600ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.format-simple .drawer.drawer-right.show {
+    box-shadow: var(--simple-shadow-lg);
+}
+
+/* Drawer auto-close is handled by JS via Boost's own close button. */
+
+/* Ensure no max-width constraint on main content containers. */
+.format-simple .container-fluid,
+.format-simple #page-content .container-fluid {
+    max-width: none;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* Override Boost theme's limited-width media query. */
+@media (min-width: 768px) {
+    .format-simple.pagelayout-standard #page.drawers .main-inner,
+    .format-simple.limitedwidth #page.drawers .main-inner,
+    .format-simple #page.drawers .main-inner {
+        max-width: 95vw;
+    }
+}
+
+/* =========================================================================
+   Layout — Navigation + Content
+   ========================================================================= */
+
+.format-simple .format-simple-wrapper {
+    position: relative;
+    display: flex;
+    min-height: calc(100vh - 60px);
+    background: linear-gradient(to bottom right, var(--simple-bg), var(--simple-surface));
+    font-family: var(--simple-font-sans);
+    gap: 0;
+    border-radius: var(--simple-radius-lg);
+}
+
+/* =========================================================================
+   Navigation Panel
+   ========================================================================= */
+
+.format-simple .simple-nav {
+    width: var(--simple-nav-width);
+    min-width: var(--simple-nav-width);
+    background: var(--simple-surface);
+    border-right: 1px solid var(--simple-border);
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 60px;
+    height: calc(100vh - 60px);
+    overflow-y: auto;
+    z-index: 10;
+    transition: width var(--simple-nav-collapse-speed), min-width var(--simple-nav-collapse-speed);
+    border-top-left-radius: var(--simple-radius-lg);
+    border-bottom-left-radius: var(--simple-radius-lg);
+}
+
+.format-simple .simple-nav-inner {
+    padding: 24px 0;
+    flex: 1;
+}
+
+/* ---- Navigation Item ---- */
+
+.format-simple .simple-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 20px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--simple-text);
+    transition: background var(--simple-transition-fast), color var(--simple-transition-fast);
+    position: relative;
+    min-height: 48px;
+    line-height: 1.3;
+}
+
+.format-simple .simple-nav-item:hover {
+    background: var(--simple-border-light);
+}
+
+.format-simple .simple-nav-item:focus-visible {
+    outline: 2px solid var(--simple-accent);
+    outline-offset: -2px;
+    border-radius: var(--simple-radius-sm);
+}
+
+/* Active state — seamless gradient band flowing into content. */
+.format-simple .simple-nav-item.is-active {
+    background: linear-gradient(to right, #dbeafe, var(--simple-bg));
+    color: var(--simple-accent);
+    font-weight: 600;
+    margin-right: -1px;
+    padding-right: 21px;
+    z-index: 12;
+    box-shadow:
+        inset 3px 0 0 var(--simple-accent),
+        0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+/* Speech-bubble inverse curves — concave corners above and below active tab. */
+.format-simple .simple-nav-item.is-active::before,
+.format-simple .simple-nav-item.is-active::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    width: var(--simple-radius-lg);
+    height: var(--simple-radius-lg);
+    pointer-events: none;
+    z-index: 11;
+}
+
+.format-simple .simple-nav-item.is-active::before {
+    bottom: 100%;
+    background:
+        radial-gradient(
+            circle at 0% 0%,
+            var(--simple-surface) calc(var(--simple-radius-lg) - 0.5px),
+            var(--simple-bg) var(--simple-radius-lg)
+        );
+}
+
+.format-simple .simple-nav-item.is-active::after {
+    top: 100%;
+    background:
+        radial-gradient(
+            circle at 0% 100%,
+            var(--simple-surface) calc(var(--simple-radius-lg) - 0.5px),
+            var(--simple-bg) var(--simple-radius-lg)
+        );
+}
+
+/* Legacy callout element — hidden, superseded by pseudo-element curves. */
+body.format-simple .simple-nav-callout {
+    display: none;
+}
+
+/* ---- Section 0 / Course Info Nav Item ---- */
+
+.format-simple .simple-nav-item-section0 {
+    padding-top: 16px;
+    padding-bottom: 16px;
+}
+
+.format-simple .simple-nav-indicator-info {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--simple-accent-light);
+    color: var(--simple-accent);
+    font-size: 1rem;
+}
+
+.format-simple .simple-nav-item-section0.is-active .simple-nav-indicator-info {
+    background: var(--simple-accent);
+    color: #fff;
+}
+
+.format-simple .simple-unread-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    pointer-events: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.format-simple .simple-cm-unread-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    margin-left: 6px;
+    border-radius: 9px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* The forum's name on a discussion page leads back to its list of discussions. It reads as a
+   heading until pointed at; then an arrow fades in after the name. The arrow sits after rather
+   than before, where the forum icon would cover it, and holds its space while hidden so the
+   heading never moves. Touch screens have no hover, so there it stays faintly in view.
+   Discussion pages sit outside .format-simple-wrapper, where the design tokens are defined, so
+   the colours and timing here are literal values. */
+.format-simple .simple-forum-backlink {
+    color: inherit;
+    text-decoration: none;
+}
+
+.format-simple .simple-forum-backlink:hover,
+.format-simple .simple-forum-backlink:focus-visible {
+    color: inherit;
+    text-decoration: none;
+}
+
+/* The arrow is drawn as a mask rather than a text character, so its size and stroke weight do
+   not depend on the theme's font. The grey keeps about 3.3:1 against white, over the 3:1 WCAG
+   asks of an icon. */
+.format-simple .simple-forum-backlink::after {
+    content: "";
+    display: inline-block;
+    width: 1.4em;
+    height: 1.4em;
+    margin-left: 0.3em;
+    vertical-align: -0.3em;
+    background-color: #8a919c;
+    -webkit-mask: url([[pix:format_simple|backarrow]]) center / contain no-repeat;
+    mask: url([[pix:format_simple|backarrow]]) center / contain no-repeat;
+    opacity: 0;
+    transform: translateX(-0.3em);
+    transition: opacity 400ms cubic-bezier(0.4, 0, 0.2, 1), transform 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+}
+
+.format-simple .simple-forum-backlink:hover::after,
+.format-simple .simple-forum-backlink:focus-visible::after {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+@media (hover: none) {
+    .format-simple .simple-forum-backlink::after {
+        opacity: 0.5;
+        transform: translateX(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .format-simple .simple-forum-backlink::after {
+        transition: none;
+    }
+}
+
+.format-simple .simple-nav-separator {
+    height: 1px;
+    background: var(--simple-border);
+    margin: 8px 20px;
+}
+
+/* Collapsed state for section 0 separator. */
+.format-simple .simple-nav.is-collapsed .simple-nav-separator {
+    margin: 8px 12px;
+}
+
+/* Restricted state. */
+.format-simple .simple-nav-item.is-restricted {
+    color: var(--simple-text-muted);
+    cursor: default;
+}
+
+.format-simple .simple-nav-item.is-restricted:hover {
+    background: var(--simple-border-light);
+}
+
+/* ---- Navigation Label ---- */
+
+.format-simple .simple-nav-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 1;
+    transition: opacity var(--simple-nav-collapse-speed), flex var(--simple-nav-collapse-speed);
+}
+
+/* ---- Progress Indicator SVGs ---- */
+
+.format-simple .simple-nav-indicator {
+    position: relative;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.format-simple .simple-progress-svg {
+    display: block;
+}
+
+.format-simple .simple-progress-text {
+    font-size: 8px;
+    font-weight: 700;
+    fill: var(--simple-text-secondary);
+    font-family: var(--simple-font-sans);
+}
+
+.format-simple .simple-progress-bar {
+    transition: stroke-dashoffset var(--simple-transition-slow);
+}
+
+.format-simple .simple-lock-icon {
+    font-family: "Font Awesome 6 Free", "FontAwesome";
+    font-weight: 900;
+    font-size: 12px;
+    fill: var(--simple-text-muted);
+}
+
+/* ---- Restriction Popover ---- */
+
+.format-simple .simple-restriction-popover {
+    display: none;
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--simple-surface);
+    border: 1px solid var(--simple-border);
+    border-radius: var(--simple-radius);
+    padding: 12px 16px;
+    box-shadow: var(--simple-shadow-lg);
+    z-index: 100;
+    min-width: 220px;
+    max-width: 320px;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--simple-text);
+    line-height: 1.5;
+    pointer-events: none;
+}
+
+.format-simple .simple-nav-item.is-restricted:hover .simple-restriction-popover,
+.format-simple .simple-nav-item.is-restricted:focus-within .simple-restriction-popover {
+    display: block;
+    animation: simpleFadeIn var(--simple-transition-fast) ease;
+}
+
+/* =========================================================================
+   Content Area
+   ========================================================================= */
+
+.format-simple .simple-content {
+    flex: 1;
+    min-width: 0;
+    padding: 32px 40px;
+    background: linear-gradient(to bottom right, var(--simple-bg), var(--simple-surface) 40%);
+    border-radius: 0 var(--simple-radius-lg) var(--simple-radius-lg) 0;
+    margin: 12px 12px 12px 0;
+    border: 1px solid rgba(37, 99, 235, 0.06);
+    border-left: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* ---- Section ---- */
+
+.format-simple .simple-section {
+    animation: simpleFadeIn var(--simple-transition) ease;
+}
+
+.format-simple .simple-section[hidden] {
+    display: none;
+}
+
+/* ---- Section Header ---- */
+
+.format-simple .simple-section-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.format-simple .simple-section-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--simple-text);
+    margin: 0;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
+/* ---- Section 0 — Course Banner ---- */
+
+.format-simple .simple-banner {
+    position: relative;
+    border-radius: var(--simple-radius-lg);
+    overflow: hidden;
+    margin-bottom: 32px;
+    min-height: 200px;
+    display: flex;
+    align-items: flex-end;
+    background: linear-gradient(135deg, var(--simple-accent) 0%, #1e40af 100%);
+}
+
+.format-simple .simple-banner.has-image {
+    min-height: 240px;
+    background-size: cover;
+    background-position: center;
+}
+
+.format-simple .simple-banner-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0.15) 60%, rgba(0, 0, 0, 0.05) 100%);
+}
+
+.format-simple .simple-banner:not(.has-image) .simple-banner-overlay {
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0) 100%);
+}
+
+.format-simple .simple-banner-content {
+    position: relative;
+    z-index: 2;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.format-simple .simple-banner-code {
+    display: inline-block;
+    align-self: flex-start;
+    padding: 4px 12px;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 20px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.format-simple .simple-banner-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.format-simple .simple-banner-actions {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 3;
+}
+
+/* ---- Outcomes Button ---- */
+
+.format-simple .simple-outcomes-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid var(--simple-border);
+    border-radius: var(--simple-radius-sm);
+    background: var(--simple-surface);
+    color: var(--simple-text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--simple-transition-fast);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.format-simple .simple-outcomes-btn:hover {
+    border-color: var(--simple-accent);
+    color: var(--simple-accent);
+    box-shadow: var(--simple-shadow);
+}
+
+.format-simple .simple-outcomes-btn[aria-expanded="true"] {
+    background: var(--simple-accent-light);
+    border-color: var(--simple-accent);
+    color: var(--simple-accent);
+}
+
+/* ---- Outcomes Panel ---- */
+
+.format-simple .simple-outcomes-panel {
+    background: var(--simple-surface);
+    border: 1px solid var(--simple-border);
+    border-radius: var(--simple-radius);
+    box-shadow: var(--simple-shadow-md);
+    margin-bottom: 24px;
+    overflow: hidden;
+    animation: simpleSlideDown var(--simple-transition-fast) ease;
+}
+
+.format-simple .simple-outcomes-panel[hidden] {
+    display: none;
+}
+
+.format-simple .simple-outcomes-inner {
+    padding: 20px 24px;
+}
+
+.format-simple .simple-outcomes-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--simple-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 12px;
+}
+
+.format-simple .simple-outcomes-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.format-simple .simple-outcome-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    font-size: 0.9375rem;
+    color: var(--simple-text);
+    line-height: 1.5;
+}
+
+.format-simple .simple-outcome-item + .simple-outcome-item {
+    border-top: 1px solid var(--simple-border-light);
+}
+
+.format-simple .simple-outcome-icon {
+    color: var(--simple-text-muted);
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+/* ---- Section Summary ---- */
+
+.format-simple .simple-section-summary {
+    color: var(--simple-text-secondary);
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    margin-bottom: 32px;
+    margin-left: 24px;
+    max-width: 80vw;
+    text-align: justify;
+}
+
+.format-simple .simple-section-summary p,
+.format-simple .simple-section-summary div,
+.format-simple .simple-section-summary li {
+    text-align: justify;
+}
+
+/* ---- Restriction Notice ---- */
+
+.format-simple .simple-restricted-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 20px 24px;
+    background: var(--simple-border-light);
+    border-radius: var(--simple-radius);
+    color: var(--simple-text-secondary);
+    font-size: 0.9375rem;
+    line-height: 1.6;
+}
+
+.format-simple .simple-restricted-notice .fa-lock {
+    font-size: 1.25rem;
+    color: var(--simple-text-muted);
+    margin-top: 2px;
+}
+
+/* =========================================================================
+   Content Zones (flat layout for DnD compatibility)
+   ========================================================================= */
+
+/* The cmlist is a flat container — all cmitems and zone headers are siblings. */
+.format-simple .simple-cmlist {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Zone headers act as section dividers within the flat list. */
+.format-simple .simple-zone-header {
+    margin-top: 24px;
+}
+
+.format-simple .simple-zone-header:first-child,
+.format-simple .simple-zone-header[data-zone-header="learning"] {
+    margin-top: 0;
+}
+
+.format-simple .simple-zone-header[hidden] {
+    display: none;
+}
+
+.format-simple .simple-zone-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--simple-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--simple-border-light);
+}
+
+/* Section 0 flat activity list — same spacing as zone items. */
+.format-simple .simple-section-info [data-for="cmlist"] {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* =========================================================================
+   Learning Content Zone
+   ========================================================================= */
+
+/* Inline page content. */
+.format-simple .simple-inline-content {
+    background: var(--simple-surface);
+    border-radius: var(--simple-radius);
+    padding: 32px;
+    box-shadow: var(--simple-shadow);
+    line-height: 1.8;
+    font-size: 1rem;
+    color: var(--simple-text);
+    margin-bottom: 24px;
+    text-align: justify;
+    margin-right: auto;
+    margin-left: auto;
+    min-width: 67vw;
+}
+
+.format-simple .simple-inline-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--simple-radius-sm);
+}
+
+.format-simple .simple-inline-content h1,
+.format-simple .simple-inline-content h2,
+.format-simple .simple-inline-content h3,
+.format-simple .simple-inline-content h4 {
+    color: var(--simple-text);
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    line-height: 1.3;
+}
+
+.format-simple .simple-inline-content p {
+    margin-bottom: 1em;
+}
+
+/* Embed container (video). */
+.format-simple .simple-embed-container {
+    position: relative;
+    width: 100%;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    background: #000;
+    border-radius: var(--simple-radius);
+    overflow: hidden;
+    box-shadow: var(--simple-shadow-md);
+    margin-bottom: 24px;
+}
+
+.format-simple .simple-embed-iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+/* H5P embed — variable content height instead of fixed 16:9 aspect ratio. */
+.format-simple .simple-embed-container.simple-embed-h5p {
+    padding-bottom: 0;
+    height: 600px;
+}
+
+.format-simple .simple-embed-container.simple-embed-h5p .simple-embed-iframe {
+    position: relative;
+}
+
+/* SCORM embed — variable content height like H5P. */
+#page-mod-scorm-player > [is="ai-chat-bubble"] {
+    display: none;
+}
+
+.format-simple .simple-embed-container.simple-embed-scorm {
+    padding-bottom: 0;
+    height: 700px;
+}
+
+.format-simple .simple-embed-container.simple-embed-scorm .simple-embed-iframe {
+    position: relative;
+}
+
+.format-simple .simple-embed-container.simple-embed-lti {
+    padding-bottom: 0;
+    height: 700px;
+}
+
+.format-simple .simple-embed-container.simple-embed-lti .simple-embed-iframe {
+    position: relative;
+}
+
+/* ---- Embed Fullscreen Button ---- */
+.format-simple.editing .simple-embed-fullscreen-btn {
+    display: none;
+}
+
+.format-simple .simple-embed-fullscreen-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: none;
+    border-radius: var(--simple-radius-sm);
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    opacity: 0;
+    transition:
+        opacity var(--simple-transition-fast),
+        background var(--simple-transition-fast),
+        transform var(--simple-transition-fast);
+}
+
+.format-simple .simple-embed-container:hover .simple-embed-fullscreen-btn {
+    opacity: 1;
+}
+
+.format-simple .simple-embed-fullscreen-btn:hover {
+    background: rgba(0, 0, 0, 0.7);
+    transform: scale(1.05);
+}
+
+.format-simple .simple-embed-fullscreen-btn:active {
+    transform: scale(0.95);
+}
+
+/* Fullscreen state. */
+.format-simple .simple-embed-container:fullscreen {
+    padding-bottom: 0;
+    height: 100vh;
+    width: 100vw;
+    border-radius: 0;
+    background: #000;
+}
+
+.format-simple .simple-embed-container:fullscreen .simple-embed-iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.format-simple .simple-embed-container:fullscreen .simple-embed-fullscreen-btn {
+    opacity: 1;
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    z-index: 9999;
+}
+
+/* Safari fullscreen prefix. */
+.format-simple .simple-embed-container:-webkit-full-screen {
+    padding-bottom: 0;
+    height: 100vh;
+    width: 100vw;
+    border-radius: 0;
+    background: #000;
+}
+
+.format-simple .simple-embed-container:-webkit-full-screen .simple-embed-iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.format-simple .simple-embed-container:-webkit-full-screen .simple-embed-fullscreen-btn {
+    opacity: 1;
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    z-index: 9999;
+}
+
+/* Mobile: always show fullscreen button. */
+@media (max-width: 1024px) {
+    .format-simple .simple-embed-fullscreen-btn {
+        opacity: 1;
+    }
+}
+
+/* =========================================================================
+   Course Module Cards
+   ========================================================================= */
+
+.format-simple .simple-cm-card {
+    /* Anchors the stretched link that makes the whole card clickable. */
+    position: relative;
+    display: flex;
+    /* Wraps so a description can take a row of its own beneath the name. */
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--simple-surface);
+    border: 1px solid var(--simple-border);
+    border-radius: var(--simple-radius-sm);
+    text-decoration: none;
+    color: var(--simple-text);
+    transition: all var(--simple-transition-fast);
+    min-height: 48px;
+    cursor: pointer;
+}
+
+.format-simple .simple-cm-card:hover {
+    border-color: var(--simple-accent);
+    box-shadow: var(--simple-shadow-md);
+    transform: translateY(-1px);
+    color: var(--simple-text);
+    text-decoration: none;
+}
+
+.format-simple .simple-cm-card:active {
+    transform: translateY(0);
+    box-shadow: var(--simple-shadow);
+}
+
+/* Hidden / stealth activity dimming (visible only to editors). */
+.format-simple .is-dimmed {
+    opacity: 0.5;
+}
+
+.format-simple .is-dimmed .simple-cm-card::after {
+    content: '\f070';
+    font-family: 'FontAwesome';
+    font-size: 0.75rem;
+    color: var(--simple-text-muted);
+    margin-left: auto;
+    padding-left: 8px;
+}
+
+.format-simple .is-stealth .simple-cm-card::after {
+    content: '\f21b';
+}
+
+/* Primary learning content card — larger and more prominent. */
+.format-simple .simple-cm-card.simple-cm-card-primary {
+    padding: 24px;
+    border-radius: var(--simple-radius);
+    box-shadow: var(--simple-shadow);
+    font-size: 1.0625rem;
+    font-weight: 600;
+}
+
+.format-simple .simple-cm-card.simple-cm-card-primary .simple-cm-icon {
+    width: 32px;
+    height: 32px;
+}
+
+/* ---- Module Icon ---- */
+
+.format-simple .simple-cm-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    object-fit: contain;
+}
+
+/* ---- Resource Icon (Font Awesome) ---- */
+
+.format-simple .simple-resource-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--simple-radius-sm);
+    background: var(--simple-border-light);
+    color: var(--simple-text-secondary);
+    font-size: 0.875rem;
+    flex-shrink: 0;
+}
+
+/* ---- Module Name ---- */
+
+.format-simple .simple-cm-name {
+    flex: 1;
+    font-weight: 500;
+    line-height: 1.3;
+}
+
+/* ---- Completion indicator on activity cards ----
+   A small squircle at the end of the card. Sized and spaced to read as punctuation rather
+   than as a control competing with the activity name. */
+
+.format-simple .simple-cm-dot {
+    /* Must not rely on being a flex item: width and height do not apply to inline elements,
+       which would collapse this to a bare border. */
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    /* A superellipse-ish corner: rounder than a square, squarer than a circle. */
+    border-radius: 6px;
+    border: 1.5px solid var(--simple-border);
+    background: transparent;
+    transition:
+        background var(--simple-transition-fast),
+        border-color var(--simple-transition-fast),
+        transform var(--simple-transition-fast);
+}
+
+.format-simple .simple-cm-dot.is-complete {
+    background: var(--simple-success);
+    border-color: var(--simple-success);
+}
+
+/* The quiet label beside the indicator, naming what the activity asks for.
+   Collapsed rather than hidden so revealing it slides open instead of shunting the card. */
+.format-simple .simple-cm-dot-label {
+    /* Same reason as the indicator: max-width is ignored on an inline element. */
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 0;
+    max-width: 0;
+    overflow: hidden;
+    opacity: 0;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    color: var(--simple-text-muted);
+    transition:
+        max-width var(--simple-transition-fast),
+        opacity var(--simple-transition-fast),
+        margin-right var(--simple-transition-fast);
+}
+
+.format-simple .simple-cm-card:hover .simple-cm-dot-label,
+.format-simple .simple-cm-card:focus-within .simple-cm-dot-label {
+    max-width: 14rem;
+    opacity: 1;
+    margin-right: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .format-simple .simple-cm-dot-label {
+        transition: none;
+    }
+}
+
+/* Something the student marks themselves: a solid, heavier edge that invites a click. */
+.format-simple .simple-cm-dot.is-manual {
+    cursor: pointer;
+    border-width: 2.5px;
+    border-style: solid;
+    border-color: var(--simple-accent);
+}
+
+.format-simple .simple-cm-dot.is-manual:hover {
+    transform: scale(1.15);
+}
+
+.format-simple .simple-cm-dot.is-manual:focus-visible {
+    outline: 2px solid var(--simple-accent);
+    outline-offset: 2px;
+}
+
+.format-simple .simple-cm-dot.is-manual.is-complete {
+    border-color: var(--simple-success);
+}
+
+/* Something the course awards on its own: a dotted edge, and no invitation to click. */
+.format-simple .simple-cm-dot.is-conditional {
+    border-width: 1.5px;
+    border-style: dotted;
+    border-color: var(--simple-text-muted);
+    cursor: help;
+}
+
+/* Once earned, the dotted edge would fight the fill, so let the fill speak. */
+.format-simple .simple-cm-dot.is-conditional.is-complete {
+    border-style: solid;
+    border-color: var(--simple-success);
+}
+
+/* ---- Completion indicator inside content rendered in place ----
+   The indicator belongs to the content, so it sits within the same surface rather than
+   below it. The content is given room at its foot so the indicator has somewhere to live
+   without crowding the last line. */
+
+.format-simple .simple-cm-completion-inline {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    /* Clear of the last line without making a feature of itself. */
+    margin-top: 28px;
+}
+
+/* An embed fills its own aspect-ratio box, so nothing can sit inside it. Its indicator
+   attaches underneath instead, sharing the surface so the two read as one card. */
+.format-simple .simple-embed-container:has(+ .simple-cm-completion-inline) {
+    margin-bottom: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.format-simple .simple-cm-completion-inline.is-attached {
+    margin-top: 0;
+    margin-bottom: 24px;
+    padding: 12px 16px;
+    background: var(--simple-surface);
+    border-radius: 0 0 var(--simple-radius) var(--simple-radius);
+    box-shadow: var(--simple-shadow-md);
+}
+
+/* A touch larger than on a card, since it stands alone rather than beside a title. */
+.format-simple .simple-cm-completion-inline .simple-cm-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 7px;
+}
+
+/* No card to hover here, so the indicator's own row reveals the label. */
+.format-simple .simple-cm-completion-inline:hover .simple-cm-dot-label,
+.format-simple .simple-cm-completion-inline:focus-within .simple-cm-dot-label {
+    max-width: 14rem;
+    opacity: 1;
+    margin-right: 8px;
+}
+
+/* ---- Restricted Indicator ---- */
+
+.format-simple .simple-cm-restricted {
+    flex-shrink: 0;
+    color: var(--simple-text-muted);
+    font-size: 0.875rem;
+}
+
+/* =========================================================================
+   Empty State
+   ========================================================================= */
+
+.format-simple .simple-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    color: var(--simple-text-muted);
+    font-size: 1rem;
+}
+
+/* =========================================================================
+   Collapsed Navigation State
+   ========================================================================= */
+
+/* Collapsed dimensions. */
+.format-simple .simple-nav.is-collapsed {
+    width: var(--simple-nav-collapsed-width);
+    min-width: var(--simple-nav-collapsed-width);
+    overflow: hidden;
+}
+
+/* Hide labels when collapsed. */
+.format-simple .simple-nav.is-collapsed .simple-nav-label {
+    opacity: 0;
+    flex: 0 0 0;
+}
+
+/* The activity list has no room in a 60px strip, so it waits until the panel is open. */
+.format-simple .simple-nav.is-collapsed .simple-nav-cmlist {
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    margin: 0;
+    pointer-events: none;
+}
+
+/* Center progress indicators when collapsed. */
+.format-simple .simple-nav.is-collapsed .simple-nav-item {
+    justify-content: center;
+    padding-left: 12px;
+    padding-right: 12px;
+    gap: 0;
+}
+
+/* Simplify active state when collapsed — match wrapper bg for seamless blend. */
+.format-simple .simple-nav.is-collapsed .simple-nav-item.is-active {
+    margin-right: 0;
+    padding-right: 12px;
+    background: var(--simple-bg);
+}
+
+/* Hide the speech-bubble curves when collapsed. */
+.format-simple .simple-nav.is-collapsed .simple-nav-item.is-active::before,
+.format-simple .simple-nav.is-collapsed .simple-nav-item.is-active::after {
+    display: none;
+}
+
+/* Hide editing controls when collapsed. */
+.format-simple .simple-nav.is-collapsed .simple-nav-addsection {
+    display: none;
+}
+
+/* =========================================================================
+   Animations
+   ========================================================================= */
+
+@keyframes simpleFadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes simpleSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* =========================================================================
+   Editing Mode Adjustments
+   ========================================================================= */
+
+/* ---- Editing: All Sections Visible ---- */
+
+/* In editing mode all sections are displayed — remove single-section animation. */
+.format-simple.editing .simple-section {
+    animation: none;
+}
+
+/* Visual divider between sections in editing mode. */
+.format-simple.editing .simple-section + .simple-section {
+    margin-top: 48px;
+    padding-top: 48px;
+    border-top: 2px dashed var(--simple-border);
+}
+
+/* Content area should scroll naturally in editing mode. */
+.format-simple.editing .simple-content {
+    overflow-y: visible;
+}
+
+/* Disable nav collapse in editing mode — always show full nav. */
+.format-simple.editing .simple-nav.is-collapsed {
+    width: var(--simple-nav-width);
+    min-width: var(--simple-nav-width);
+    overflow: visible;
+}
+
+.format-simple.editing .simple-nav.is-collapsed .simple-nav-label {
+    opacity: 1;
+    flex: 1;
+}
+
+.format-simple.editing .simple-nav.is-collapsed .simple-nav-item {
+    justify-content: flex-start;
+    padding-left: 20px;
+    padding-right: 20px;
+    gap: 12px;
+}
+
+.format-simple.editing .simple-nav.is-collapsed .simple-nav-item.is-active {
+    margin-right: -1px;
+    padding-right: 21px;
+    background: linear-gradient(to right, #dbeafe, var(--simple-bg));
+}
+
+.format-simple.editing .simple-nav.is-collapsed .simple-nav-item.is-active::before,
+.format-simple.editing .simple-nav.is-collapsed .simple-nav-item.is-active::after {
+    display: block;
+}
+
+.format-simple.editing .simple-nav.is-collapsed .simple-nav-addsection {
+    display: block;
+}
+
+.format-simple.editing .simple-nav-item.is-restricted {
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+/* Show edit controls on hover. */
+.format-simple .simple-section .editingactions {
+    opacity: 0;
+    transition: opacity var(--simple-transition-fast);
+}
+
+.format-simple .simple-section:hover .editingactions,
+.format-simple.editing .simple-section .editingactions {
+    opacity: 1;
+}
+
+/* ---- Section Header Actions ---- */
+
+.format-simple .simple-section-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.format-simple .simple-section-controlmenu {
+    display: inline-flex;
+}
+
+/* ---- Activity Control Menus ---- */
+
+.format-simple .simple-cm-wrapper {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+}
+
+.format-simple .simple-cm-wrapper .simple-cm-card {
+    flex: 1;
+    min-width: 0;
+}
+
+.format-simple .simple-cm-edit {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity var(--simple-transition-fast);
+    margin-left: 8px;
+    padding: 0 2px 0 8px;
+    border-left: 1px solid var(--simple-border);
+}
+
+.format-simple .simple-cm-wrapper:hover .simple-cm-edit,
+.format-simple.editing .simple-cm-wrapper .simple-cm-edit,
+.format-simple .simple-cm-edit:has(.dropdown-menu.show) {
+    opacity: 1;
+}
+
+/* Learning content items need positioning context for the edit button. */
+.format-simple .simple-cm-learning {
+    position: relative;
+}
+
+/* Learning content zone edit button — absolute for embeds/inline,
+   but flex for card-based items (matching resources/activities). */
+.format-simple .simple-cm-learning .simple-cm-edit {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    opacity: 0;
+    z-index: 5;
+}
+
+/* When a learning item contains a card link (not inline/embed), use flex
+   layout so the card and edit button sit side-by-side like other zones. */
+.format-simple .simple-cm-learning:has(.simple-cm-card) {
+    display: flex;
+    align-items: stretch;
+}
+
+.format-simple .simple-cm-learning:has(.simple-cm-card) .simple-cm-card {
+    flex: 1;
+    min-width: 0;
+}
+
+.format-simple .simple-cm-learning:has(.simple-cm-card) .simple-cm-edit {
+    position: static;
+    margin-left: 8px;
+    padding: 0 2px 0 8px;
+    border-left: 1px solid var(--simple-border);
+}
+
+.format-simple .simple-cm-learning:hover .simple-cm-edit,
+.format-simple.editing .simple-cm-learning .simple-cm-edit,
+.format-simple .simple-cm-learning .simple-cm-edit:has(.dropdown-menu.show) {
+    opacity: 1;
+}
+
+/* Action menus inside activity items. */
+.format-simple .simple-cm-edit .action-menu,
+.format-simple .simple-section-controlmenu .action-menu,
+.format-simple .simple-banner-actions .action-menu {
+    position: relative;
+}
+
+/* All dropdown menus within the format — ensure they escape any overflow
+   constraints and sit above all other content. Using position:fixed via
+   Popper.js keeps them viewport-anchored so they never get clipped by
+   parent overflow or flex containers. */
+.format-simple .dropdown-menu {
+    z-index: 1070;
+}
+
+.format-simple .dropdown-menu.show {
+    min-width: 220px;
+}
+
+/* Prevent parent containers from clipping dropdown menus. */
+.format-simple .simple-cm-wrapper,
+.format-simple .simple-cm-learning,
+.format-simple .simple-inline-content,
+.format-simple [data-for="cmitem"] {
+    overflow: visible;
+}
+
+/* When a dropdown is open, lift the entire row above neighbouring cards
+   so the menu is not obscured by adjacent card stacking contexts. */
+.format-simple .simple-cm-wrapper:has(.dropdown-menu.show),
+.format-simple .simple-cm-learning:has(.dropdown-menu.show),
+.format-simple [data-for="cmitem"]:has(.dropdown-menu.show) {
+    z-index: 1060;
+    position: relative;
+}
+
+/* ---- Add Activity Button ---- */
+
+.format-simple .simple-section-addactivity {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--simple-border);
+}
+
+/* ---- Add Section Button in Nav ---- */
+
+.format-simple .simple-nav-addsection {
+    padding: 16px 20px;
+    border-top: 1px solid var(--simple-border);
+}
+
+/* =========================================================================
+   Mobile Header Bar (hamburger + course title)
+   ========================================================================= */
+
+body.format-simple .simple-mobile-header {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    background: var(--simple-surface);
+    border-bottom: 1px solid var(--simple-border);
+    border-radius: var(--simple-radius-lg) var(--simple-radius-lg) 0 0;
+}
+
+.format-simple .simple-mobile-nav-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border: 1px solid var(--simple-border);
+    border-radius: var(--simple-radius-sm);
+    background: var(--simple-surface);
+    color: var(--simple-text);
+    font-size: 1.125rem;
+    cursor: pointer;
+    transition: all var(--simple-transition-fast);
+}
+
+.format-simple .simple-mobile-nav-toggle:hover {
+    border-color: var(--simple-accent);
+    color: var(--simple-accent);
+    box-shadow: var(--simple-shadow);
+}
+
+.format-simple .simple-mobile-course-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--simple-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.3;
+}
+
+/* =========================================================================
+   Responsive — Tablet
+   ========================================================================= */
+
+@media (max-width: 1024px) {
+    /* Hide redundant page heading — course title is in the mobile header bar. */
+    .format-simple .page-header-headings {
+        display: none;
+    }
+
+    body.format-simple .simple-mobile-header {
+        display: flex;
+    }
+
+    .format-simple .simple-mobile-nav-toggle {
+        display: flex;
+    }
+
+    .format-simple .format-simple-wrapper {
+        flex-direction: column;
+    }
+
+    .format-simple .simple-nav {
+        width: 100%;
+        min-width: 100%;
+        height: auto;
+        position: relative;
+        top: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--simple-border);
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height var(--simple-transition);
+    }
+
+    .format-simple .simple-nav.is-open {
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    .format-simple .simple-nav-inner {
+        padding: 12px 0;
+    }
+
+    .format-simple .simple-nav-item {
+        padding: 12px 20px;
+    }
+
+    .format-simple .simple-nav-item.is-active::before,
+    .format-simple .simple-nav-item.is-active::after {
+        display: none;
+    }
+
+    /* Disable collapse on tablet/mobile — nav uses drawer pattern instead. */
+    .format-simple .simple-nav.is-collapsed {
+        width: 100%;
+        min-width: 100%;
+    }
+
+    .format-simple .simple-nav.is-collapsed .simple-nav-label {
+        opacity: 1;
+        flex: 1;
+    }
+
+    .format-simple .simple-nav.is-collapsed .simple-nav-item {
+        justify-content: flex-start;
+        padding-left: 20px;
+        padding-right: 20px;
+        gap: 12px;
+    }
+
+    .format-simple .simple-content {
+        padding: 24px 20px;
+        max-width: 100%;
+        margin: 0;
+        border-radius: 0;
+    }
+
+    .format-simple .simple-restriction-popover {
+        left: 16px;
+        right: 16px;
+        top: 100%;
+        transform: none;
+        min-width: auto;
+    }
+}
+
+/* =========================================================================
+   Responsive — Mobile
+   ========================================================================= */
+
+@media (max-width: 768px) {
+    .format-simple .simple-section-title {
+        font-size: 1.375rem;
+    }
+
+    .format-simple .simple-section-header {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .format-simple .simple-banner {
+        min-height: 160px;
+    }
+
+    .format-simple .simple-banner.has-image {
+        min-height: 180px;
+    }
+
+    .format-simple .simple-banner-content {
+        padding: 24px 20px;
+    }
+
+    .format-simple .simple-banner-title {
+        font-size: 1.375rem;
+    }
+
+    .format-simple .simple-inline-content {
+        padding: 20px;
+        border-radius: var(--simple-radius-sm);
+    }
+
+    .format-simple .simple-cm-card {
+        padding: 12px 14px;
+    }
+
+    .format-simple .simple-outcomes-inner {
+        padding: 16px 18px;
+    }
+
+    .format-simple .simple-content {
+        padding: 16px 12px;
+    }
+}
+
+/* ---- Activity name, and renaming it in place ----
+   The card is a div rather than a link, so that the pencil the inplace editable adds is not
+   nested inside an anchor. Students get the whole card back as a click target through a
+   stretched link on the name; while editing, the name carries its own link instead. */
+
+.format-simple .simple-cm-name .inplaceeditable {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* The name's own link must not swallow the pencil beside it. */
+.format-simple .simple-cm-name .inplaceeditable a:not(.quickeditlink) {
+    color: inherit;
+    text-decoration: none;
+}
+
+/* Keep the pencil out of the way until the card is under the pointer, so editing mode stays
+   as quiet as the rest of the format. */
+.format-simple .simple-cm-card .quickeditlink,
+.format-simple .simple-label .quickeditlink {
+    opacity: 0;
+    transition: opacity var(--simple-transition-fast);
+}
+
+.format-simple .simple-cm-card:hover .quickeditlink,
+.format-simple .simple-cm-card:focus-within .quickeditlink,
+.format-simple .simple-label:hover .quickeditlink,
+.format-simple .simple-label:focus-within .quickeditlink {
+    opacity: 1;
+}
+
+/* Always reachable by keyboard, whatever the pointer is doing. */
+.format-simple .quickeditlink:focus-visible {
+    opacity: 1;
+    outline: 2px solid var(--simple-accent);
+    outline-offset: 2px;
+    border-radius: var(--simple-radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .format-simple .simple-cm-card .quickeditlink,
+    .format-simple .simple-label .quickeditlink {
+        transition: none;
+    }
+}
+
+/* The completion indicator sits above the stretched link so it stays clickable. */
+.format-simple .simple-cm-card .simple-cm-dot,
+.format-simple .simple-cm-card .simple-cm-dot-label {
+    position: relative;
+    z-index: 1;
+}
+
+/* ---- Labels ----
+   A label has no page of its own, so it is shown as the text it carries rather than as a card
+   pointing somewhere. It reads as part of the section, not as another thing to click. */
+
+.format-simple .simple-label {
+    position: relative;
+    margin: 0 0 20px;
+    color: var(--simple-text);
+    line-height: 1.7;
+}
+
+.format-simple .simple-label-content > *:first-child {
+    margin-top: 0;
+}
+
+.format-simple .simple-label-content > *:last-child {
+    margin-bottom: 0;
+}
+
+.format-simple .simple-label-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--simple-radius-sm);
+}
+
+/* Editing controls follow the same hover-quiet rule as everything else. */
+.format-simple .simple-label .simple-cm-edit {
+    position: absolute;
+    top: 0;
+    right: 0;
+    opacity: 0;
+    transition: opacity var(--simple-transition-fast);
+}
+
+.format-simple .simple-label:hover .simple-cm-edit,
+.format-simple .simple-label:focus-within .simple-cm-edit {
+    opacity: 1;
+}
+
+/* ---- Activity description ----
+   Shown when the teacher ticks "display description on course page", so they can say something
+   about an activity without adding a label for it. Set in the same quiet grey as the zone
+   headings, but cased normally: this is prose, not a heading. Indented past the icon so it
+   reads as belonging to the activity above it. */
+
+.format-simple .simple-cm-description {
+    /* A row of its own inside the card. */
+    flex-basis: 100%;
+    /* Clears the 24px icon and the 12px gap beside it. */
+    margin: 4px 0 0 36px;
+    padding: 10px 14px;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    line-height: 1.6;
+    color: var(--simple-text-muted);
+    border-left: 2px solid var(--simple-border-light);
+    /* Above the stretched link, so any link in the description is clickable. */
+    position: relative;
+    z-index: 1;
+}
+
+.format-simple .simple-cm-description > *:first-child {
+    margin-top: 0;
+}
+
+.format-simple .simple-cm-description > *:last-child {
+    margin-bottom: 0;
+}
+
+.format-simple .simple-cm-description img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* The card is no longer a single row, so its name should not be pushed off centre. */
+.format-simple .simple-cm-card:has(.simple-cm-description) {
+    align-items: flex-start;
+}
+
+.format-simple .simple-cm-card:has(.simple-cm-description) .simple-cm-icon,
+.format-simple .simple-cm-card:has(.simple-cm-description) .simple-cm-name {
+    align-self: center;
+}
+
+/* ---- Activity list in the unit index ----
+   Only the unit being read lists its activities, so the panel stays a list of units. Optional,
+   and off unless the course asks for it. Indented under its unit and set quietly, so the units
+   themselves remain what the eye lands on. */
+
+.format-simple .simple-nav-cmlist {
+    list-style: none;
+    margin: 2px 0 8px;
+    padding: 0 12px 0 24px;
+    max-height: 40rem;
+    opacity: 1;
+    transition:
+        opacity var(--simple-transition-fast),
+        max-height var(--simple-transition-fast);
+}
+
+.format-simple .simple-nav-cmitem {
+    margin: 0;
+}
+
+.format-simple .simple-nav-cmlink {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 6px 10px;
+    background: none;
+    border: 0;
+    border-radius: var(--simple-radius-sm);
+    text-align: left;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--simple-text-secondary);
+    cursor: pointer;
+    transition: background var(--simple-transition-fast), color var(--simple-transition-fast);
+}
+
+.format-simple .simple-nav-cmlink:hover {
+    background: var(--simple-border-light);
+    color: var(--simple-text);
+}
+
+.format-simple .simple-nav-cmlink:focus-visible {
+    outline: 2px solid var(--simple-accent);
+    outline-offset: -2px;
+}
+
+/* Smaller than on a card: this is a list, and the names carry the meaning. */
+.format-simple .simple-nav-cmlist .simple-cm-dot {
+    width: 13px;
+    height: 13px;
+    border-radius: 5px;
+}
+
+.format-simple .simple-nav-cmname {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* A completed activity has said what it needs to, so it recedes. */
+.format-simple .simple-nav-cmlink[data-completion-state="complete"] .simple-nav-cmname {
+    color: var(--simple-text-muted);
+}
+
+/* Briefly mark whatever an index entry sent the reader to. */
+.format-simple .is-flagged {
+    animation: simple-flag 1.6s ease-out;
+}
+
+@keyframes simple-flag {
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 transparent;
+    }
+
+    20% {
+        box-shadow: 0 0 0 3px var(--simple-accent-light);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .format-simple .simple-nav-cmlist {
+        transition: none;
+    }
+
+    .format-simple .is-flagged {
+        animation: none;
+    }
+}
+
+/* ---- Unit indicator: nothing to track, and custom icons ----
+   A unit with no completion-tracked activities has no progress to report. An empty ring there
+   reads as work outstanding, so it gets a filled dot instead: same family as the ring, but
+   plainly not a measure of anything. */
+
+.format-simple .simple-progress-svg.is-untracked {
+    opacity: 0.85;
+}
+
+/* A teacher's chosen icon, sitting in the middle of the ring where the percentage would be. */
+.format-simple .simple-nav-ringicon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.75rem;
+    line-height: 1;
+    color: var(--simple-text-secondary);
+    pointer-events: none;
+}
+
+/* The same icon where there is no ring to sit inside. */
+.format-simple .simple-nav-plainicon {
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--simple-text-secondary);
+}
+
+/* On the unit being read, the icon lifts with the rest of the item. */
+.format-simple .simple-nav-item.is-active .simple-nav-ringicon,
+.format-simple .simple-nav-item.is-active .simple-nav-plainicon {
+    color: var(--simple-accent);
+}
+
+/* YUI dialogues (the quiz preflight check, the activity chooser) ship with
+   square corners, which sit oddly against the rounded cards and buttons the
+   rest of this format uses. Rounding them applies in both themes, so it is
+   scoped to .format-simple rather than to the dark attribute — the matching
+   dark-mode rule adds only the glow that lifts the dialogue off the page.
+   10px matches the radius Boost already gives the activity chooser's own
+   body, so the two agree rather than the body squaring off inside a rounded
+   frame. No overflow: hidden to go with it: it would crop the menus and
+   autocomplete popups these dialogues open, and it is not needed here, since
+   the only child that paints to the edge is that chooser body and it already
+   carries matching bottom corners. */
+body.format-simple .moodle-dialogue-base .moodle-dialogue-wrap {
+    border-radius: 10px;
+}
+
+/* =========================================================================
+   Dark Mode
+   ========================================================================= */
+
+/* ---- Light/dark cross-fade ----
+   A per-property CSS transition (background-color, color, ...) cannot give
+   a coordinated fade here: dozens of elements in this file already declare
+   their own transition for their own purposes (nav collapse, popover open,
+   button hover), each at a different duration and covering a different
+   property list, and a shorthand transition declaration does not merge
+   across rules of different specificity — the more specific one simply
+   replaces it. A single flat-colour overlay (an earlier attempt at this)
+   does not really solve that either: fading it in necessarily passes
+   through a moment where it sits fully opaque, wiping every element on the
+   page to one solid colour before the reveal even starts — which reads as
+   a flash to black or white, not a fade.
+   The View Transitions API (triggered from cognav.js) avoids both
+   problems: the browser captures the page before and after the theme
+   attribute changes and cross-dissolves those two real snapshots directly
+   into one another, so there is never a flat, detail-free frame in
+   between — just the old page blending straight into the new one. These
+   pseudo-elements are not part of the normal DOM, so they cannot be
+   scoped with a `.format-simple` ancestor selector the usual way; in
+   practice that is fine, since cognav.js is the only code in this plugin
+   that ever calls document.startViewTransition(). Browsers without
+   support simply keep their default (instant) behaviour.
+   The duration reads from a custom property rather than a literal value
+   so cognav.js can ask for a slower fade for one specific trigger — auto
+   mode crossing its scheduled boundary while the page sits open and
+   unattended — without a second, near-duplicate pseudo-element rule:
+   custom properties inherit into the view-transition pseudo-element tree
+   even though ordinary selectors cannot reach it. A manual toggle click or
+   schedule edit leaves the property unset and gets the 1000ms default. */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: var(--simple-theme-transition-duration, 1000ms);
+}
+
+/* ---- Design tokens ----
+   The wrapper's own custom properties are simply redefined here; every rule
+   built on var(--simple-*) — nav, cards, content, focus rings — repaints
+   itself automatically. Every colour below was checked against its
+   background for WCAG AA contrast (>=4.5:1 for text, >=3:1 for large text
+   and icons). */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .format-simple-wrapper {
+    --simple-bg: #0f1420;
+    --simple-surface: #182234;
+    --simple-text: #e8eaf0;
+    --simple-text-secondary: #a8b0c3;
+    --simple-text-muted: #7c8598;
+    --simple-border: #2a3346;
+    --simple-border-light: #232b3d;
+    --simple-accent: #5b9bf5;
+    --simple-accent-light: #142943;
+    --simple-success: #34d399;
+    --simple-success-light: #0f2e22;
+    --simple-warning: #fbbf24;
+    --simple-danger: #f87171;
+}
+
+/* ---- Outer page chrome ----
+   #topofscroll.main-inner and #page.drawers sit outside the format's own
+   wrapper (Boost draws them), so they keep Boost's white page background
+   even once the wrapper itself has gone dark. Painting them dark too — and
+   the body as a catch-all — closes that gap so the whole page reads as one
+   dark surface instead of a dark card floating on white. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] {
+    background: #0f1420;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] #topofscroll.main-inner,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] #page.drawers,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] #page-content,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .course-content {
+    background: #0f1420;
+}
+
+/* Other course pages (settings, and any other Moodle form) sit on that same
+   dark background now, but their headings and field labels are Boost's
+   default near-black text, left over from the light page they were designed
+   for. Repainting them here — sitewide under dark mode, not just inside the
+   format's own wrapper — keeps every page legible once dark mode is on.
+   None of Boost's underlying rules for these carry !important, so the extra
+   body-level selectors here are enough on their own to win. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] h1,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .h1,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] h2,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .h2,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] h3,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .h3,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] h4,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .h4,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] h5,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .h5,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] h6,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .h6,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] label {
+    color: #e8eaf0;
+}
+
+/* Links keep the site's own link colour (Bootstrap's --bs-link-color, which
+   admins can customise per theme) rather than a colour we hardcode — but
+   whatever that colour is, it was tuned for a white page and reads too dark
+   on our dark surfaces, most noticeably in tables where several columns are
+   entirely links (student name, review-attempt, grade). A brightness filter
+   scales that colour up towards white without touching its hue, so this
+   tracks whatever --bs-link-color actually resolves to instead of a colour
+   we chose that would drift out of sync with a customised site — color-mix()
+   would do the same job more directly, but Moodle's theme CSS combiner
+   silently drops any rule using it, so this file avoids the function
+   entirely. Hover brightens further, matching Boost's own convention of a
+   stronger hover colour. Both win the same way the rest of this file does —
+   a plain `a`/`a:hover` type selector carries no !important to fight.
+   filter applies to the whole element, not just its text colour, so an icon
+   glyph sitting inside a link (e.g. the quiz report's correct/incorrect
+   markers) brightens slightly too — a minor, acceptable side effect, since
+   those icons already carry their own green/red hue that survives a mild
+   brightness boost. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] a {
+    filter: brightness(1.65);
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] a:hover {
+    filter: brightness(1.95);
+}
+
+/* The forum back-link is a heading in the heading's own colour; brightening it would make it
+   stand out from the headings around it. Its arrow takes the dark page's secondary grey. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] a.simple-forum-backlink {
+    filter: none;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] a.simple-forum-backlink::after {
+    background-color: #8b94a8;
+}
+
+/* Boost gives focused links a filled highlight block rather than a ring —
+   background-color: #d2e8fb with color: #1d2125, plus box-shadow bands that
+   extend it above and underline it below. On a white page that reads as a
+   pale blue marker pen; on a dark one it is a glaring light slab, and the
+   brightness filter above compounds it by lifting the fill toward white
+   while leaving the near-black text where it is.
+   The indicator itself has to stay — it is the visible-focus affordance
+   keyboard users navigate by (WCAG 2.4.7), so this recolours it rather than
+   switching it off. The block is kept, inverted for a dark page: a deep blue
+   fill with white text (~15:1) and the lower band in the accent so the
+   marker still reads as a distinct indicator against the page (~6:1, over
+   the 3:1 that WCAG 1.4.11 asks of a focus indicator).
+   filter: none stops the brightness rule above from compounding — with the
+   focused state setting its own colours outright, the lift is not just
+   redundant but actively works against the contrast chosen here.
+   The selector mirrors Boost's own list rather than simplifying it: the
+   #page-footer member carries an id, so an override that skipped it would
+   lose there while winning everywhere else. outline is deliberately not
+   restated — Boost's transparent 0.25rem outline still applies through the
+   original rule, and it is what surfaces focus in forced-colours mode. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.aalink,
+a.autolink,
+.arrow_link,
+a:not([class]),
+.activityinstance > a,
+#page-footer a:not([class])):is(:focus, .focus) {
+    background-color: #1e3a5f;
+    color: #fff;
+    box-shadow: 0 -0.25rem #1e3a5f, 0 0.25rem #5b9bf5;
+    filter: none;
+}
+
+/* Icon-only buttons (e.g. the quick-edit pencil beside an activity title)
+   inherit the same dark, near-invisible text colour as the headings above. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .btn-icon {
+    color: #e8eaf0;
+}
+
+/* Activity icons (.simple-cm-icon) are <img> elements — Moodle's monologo
+   service, requested with filtericon=1, so the colour is a flat dark
+   silhouette that cannot be repainted with the `color` property. Inverting
+   the image is the standard trick for that case: black becomes white/light
+   while the transparent background stays transparent. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-cm-icon {
+    filter: invert(1) brightness(1.4);
+}
+
+/* The single-activity page header (title, completion, dates) is Boost
+   chrome with a hard-coded light grey panel background (#f8f9fa) — the
+   same "light box left behind on a dark page" problem as .main-inner
+   further up, so it gets the same dark surface treatment.
+   .path-mod is a class Moodle puts directly on <body>, the very same
+   element as .format-simple and [data-simple-theme] — not a wrapper
+   around it — so it has to be compounded onto the body selector rather
+   than chained after it with a descendant combinator. Written as a
+   descendant (as in the previous attempt), the selector asks for a
+   .path-mod element nested *inside* that body, which does not exist, so
+   the rule silently never matched anything. */
+body.format-simple.path-mod[data-simple-theme="dark"][data-simple-theme="dark"] .activity-header:not(:empty) {
+    background-color: #182234;
+}
+
+/* The activity dates/availability strip beneath the header title is Boost's
+   muted grey (#495057) — legible on the light panel it was designed for,
+   not on a dark one. Same .path-mod-on-body fix as above. */
+body.format-simple.path-mod[data-simple-theme="dark"][data-simple-theme="dark"] .activity-information .activity-dates,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .activity-dates {
+    color: #a8b0c3;
+    border-bottom-color: #2a3346;
+}
+
+/* .generaltable (participants, grades, and most other Moodle listing
+   tables) paints itself explicitly with Bootstrap's light-theme variables
+   — background-color: var(--bs-body-bg) resolves to #fff, color:
+   var(--bs-emphasis-color) to #000 — rather than inheriting the page
+   background, so our earlier ambient dark-background fixes never reached
+   it. Cells and thead cells set their own border-top/border-bottom colour
+   from var(--bs-border-color) too, which needs the same direct override;
+   .generaltable is a real descendant (not a body-level class like
+   .path-mod), so a plain descendant combinator is correct here. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .generaltable {
+    background-color: #182234;
+    color: #e8eaf0;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .generaltable th,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .generaltable td {
+    border-top-color: #2a3346;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .generaltable thead th,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .generaltable thead td {
+    border-bottom-color: #2a3346;
+    background-color: #1e293d;
+    color: #e8eaf0;
+}
+
+/* Boost's own .generaltable tbody td, .generaltable tbody th rule
+   (background-color: inherit; two type selectors plus the .generaltable
+   class, specificity 0,1,2) outranks Bootstrap's var(--bs-table-bg) cell
+   rule, and "inherit" here pulls from the *row's* computed background —
+   never set by anything, so it resolves to transparent — not from the
+   table's own background-color two levels up, "inherit" only reaches the
+   immediate parent. That leaves tbody cells transparent regardless of the
+   .generaltable background-color fix above, which is exactly why only the
+   thead cells (styled directly, above) were turning dark while the body
+   stayed light. Setting background-color directly on the cells themselves,
+   at higher specificity than Boost's rule, is the only way to reach them. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .generaltable tbody td,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .generaltable tbody th {
+    background-color: #182234;
+    color: #e8eaf0;
+}
+
+/* Bootstrap's .table-striped (e.g. the quiz results/overview report,
+   id="attempts") bands its rows with an inset box-shadow driven by the
+   --bs-table-striped-bg custom property, painted on top of the cell
+   background-color above rather than replacing it. The theme's own value —
+   rgba(var(--bs-emphasis-color-rgb), 0.03), a near-black tint meant for a
+   white row — is invisible against our dark background, so odd/even rows
+   look identical. Redefining the variable here on the striped table itself
+   wins the cascade (custom properties resolve by specificity same as any
+   other declaration) and gives the inset shadow a light tint instead, which
+   lightens alternating rows enough to read as a stripe on the dark surface. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .table-striped {
+    --bs-table-striped-bg: rgba(255, 255, 255, 0.06);
+}
+
+/* An activity's intro/description text (quiz instructions, forum intros,
+   etc.) is teacher-authored rich text rendered inside core's own
+   <div class="activity-description" id="intro"> (lib/templates/
+   activity_header.mustache — shared by every module, not just quiz). It
+   commonly carries inline font-family/style overrides from the editor but
+   essentially never an inline colour, so its text just inherits Boost's
+   near-black default and goes the same illegible way as the plain <p> fix
+   further up. One rule on the wrapper is enough — <ol>/<li>/<span>/<strong>
+   inside it all inherit color normally since nothing here sets its own. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .activity-description {
+    color: #e8eaf0;
+}
+
+/* Bootstrap's .card component (e.g. the quiz attempt summary cards) paints
+   its own explicit background the same way .generaltable did, via
+   var(--bs-body-bg)/var(--bs-card-cap-bg) rather than inheriting the page
+   background, so it needs the same direct treatment — wherever a .card
+   turns up under dark mode, not just on the quiz page. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .card {
+    background-color: #182234;
+    border-color: #2a3346;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .card-header,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .card-footer {
+    background-color: #1e293d;
+    border-color: #2a3346;
+}
+
+/* Bootstrap's .alert-* variants (teacher-authored callouts inside forum
+   posts, page content, etc — as opposed to .card/.generaltable, which are
+   Moodle chrome) each paint their own light pastel background straight from
+   Bootstrap's colour variables, the same way .card/.generaltable do above,
+   so they need the same direct per-variant treatment. Unlike those two,
+   sites in production have been seen shipping their own sitewide "!important"
+   background/border overrides for these exact classes (theme colour
+   customisations, typically), which plain specificity — however many
+   selectors deep — can never beat; matched with !important here for the
+   same reason .text-muted is above. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .alert-primary {
+    background-color: #142943 !important; /* stylelint-disable-line declaration-no-important */
+    border-color: #2a4a7a !important; /* stylelint-disable-line declaration-no-important */
+    color: #5b9bf5 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .alert-secondary {
+    background-color: #1e293d !important; /* stylelint-disable-line declaration-no-important */
+    border-color: #2a3346 !important; /* stylelint-disable-line declaration-no-important */
+    color: #a8b0c3 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .alert-success {
+    background-color: #0f2e22 !important; /* stylelint-disable-line declaration-no-important */
+    border-color: #1a4a37 !important; /* stylelint-disable-line declaration-no-important */
+    color: #34d399 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .alert-danger {
+    background-color: #3a1418 !important; /* stylelint-disable-line declaration-no-important */
+    border-color: #5c2028 !important; /* stylelint-disable-line declaration-no-important */
+    color: #f87171 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .alert-warning {
+    background-color: #3a2e0f !important; /* stylelint-disable-line declaration-no-important */
+    border-color: #5c491a !important; /* stylelint-disable-line declaration-no-important */
+    color: #fbbf24 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .alert-info {
+    background-color: #0f2c3a !important; /* stylelint-disable-line declaration-no-important */
+    border-color: #1a4a5c !important; /* stylelint-disable-line declaration-no-important */
+    color: #5bc0f8 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .alert-light {
+    background-color: #182234 !important; /* stylelint-disable-line declaration-no-important */
+    border-color: #2a3346 !important; /* stylelint-disable-line declaration-no-important */
+    color: #e8eaf0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .alert-dark {
+    background-color: #0f1420 !important; /* stylelint-disable-line declaration-no-important */
+    border-color: #2a3346 !important; /* stylelint-disable-line declaration-no-important */
+    color: #e8eaf0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+/* An alert's dismiss button and any .alert-link inherit Bootstrap's
+   near-black default text colour the same way headings/labels did above. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .alert .btn-close {
+    filter: invert(1) brightness(1.4);
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .alert-link {
+    color: inherit !important; /* stylelint-disable-line declaration-no-important */
+    text-decoration: underline;
+}
+
+/* A handful of other Bootstrap components paint the same kind of explicit
+   light background/dark text that .card, .generaltable and .alert-* do
+   above, and turn up often enough across ordinary Moodle pages (forum post
+   actions, the user menu, feedback dialogs, plain text inputs) to need the
+   same direct override. Backgrounds/borders carry !important for the same
+   sitewide-override reason the .alert-* block above does; the text colours
+   are given it too since they sit in the same rule and a partial win would
+   leave dark text on a dark background, which is worse than the original
+   problem. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .dropdown-menu {
+    background-color: #182234 !important; /* stylelint-disable-line declaration-no-important */
+    border-color: #2a3346 !important; /* stylelint-disable-line declaration-no-important */
+    color: #e8eaf0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .dropdown-item {
+    color: #e8eaf0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .dropdown-item:hover,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .dropdown-item:focus {
+    background-color: #1e293d !important; /* stylelint-disable-line declaration-no-important */
+    color: #e8eaf0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .dropdown-divider {
+    border-top-color: #2a3346 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .list-group-item {
+    background-color: #182234 !important; /* stylelint-disable-line declaration-no-important */
+    border-color: #2a3346 !important; /* stylelint-disable-line declaration-no-important */
+    color: #e8eaf0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .modal-content {
+    background-color: #182234 !important; /* stylelint-disable-line declaration-no-important */
+    color: #e8eaf0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .modal-header,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .modal-footer {
+    border-color: #2a3346 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+/* Moodle still raises some dialogues through the older YUI widget stack
+   rather than Bootstrap — the quiz preflight "Start attempt" check and the
+   activity chooser are the two common ones — and those never carry
+   .modal-content, so none of the modal rules above reach them. Same
+   treatment, applied to the YUI wrapper instead.
+   `color` on the wrapper is what fixes the body copy: .form-control-static
+   (the preflight message) is not styled by Boost at all, so like the CoIFish
+   diagnostics it simply inherits from <body>. Setting it on the container
+   rather than the individual elements means anything else these dialogues
+   render inherits it too, and any descendant that does declare its own
+   colour still wins.
+   The header needs its own entry despite that: Boost sets `color: initial`
+   on .moodle-dialogue-hd, which resolves to black and blocks inheritance.
+   Its <h5> title escapes that via the heading rule earlier in this file —
+   which is why the titles already looked right — but the close button is an
+   `×` glyph drawn with ::after content, so it takes the header's colour and
+   was being painted black on a dark bar. Recolouring the header catches it
+   without needing a separate rule, and no filter trick: unlike .btn-close's
+   background image, this one is text. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .moodle-dialogue-base .moodle-dialogue-wrap {
+    background-color: #182234;
+    border-color: #2a3346;
+    color: #e8eaf0;
+    box-shadow: 0 0 10px #b6bdff;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"]
+.moodle-dialogue-base .moodle-dialogue-wrap .moodle-dialogue-hd.yui3-widget-hd {
+    color: #e8eaf0;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .chooserdialogue .moodle-dialogue-wrap .moodle-dialogue-bd,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .moodle-dialogue .moodle-dialogue-bd .content-lightbox {
+    background: #182234;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .breadcrumb {
+    background-color: transparent !important; /* stylelint-disable-line declaration-no-important */
+}
+
+/* The right-hand blocks drawer (#page.drawers is its outer scroll container,
+   already darkened above; .drawer is the sliding panel itself, drawn by
+   Boost with its own literal #f8f9fa background — a plain single-class
+   selector, so no !important needed here to win. Blocks inside it render as
+   .card, already covered elsewhere in this file, so this only needs to
+   handle the drawer chrome: the panel background, the scrollbar (both the
+   standard scrollbar-color property and its Webkit ::-webkit-scrollbar-*
+   equivalent), and the header's scrolled-state shadow, which is tuned for a
+   light panel and all but disappears against a dark one. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .drawer {
+    background-color: #182234;
+}
+
+/* boost_union's own sticky-header feature paints .drawerheader with its own
+   translucent white — rgb(255 255 255 / .7) — layered on top of whatever
+   .drawer sits behind it, so even with the drawer panel itself now dark the
+   header band reads as a washed-out light strip. Our usual compound
+   selector outranks that bare .drawerheader class the same way it wins
+   everywhere else in this file. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .drawerheader {
+    background-color: rgb(24 34 52 / 0.85);
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .drawer.scrolled .drawerheader {
+    box-shadow: 0 8px 11px -7px rgba(0, 0, 0, 0.6);
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .drawercontent {
+    scrollbar-color: #4a5568 #182234;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .drawercontent::-webkit-scrollbar-track {
+    background: #182234;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .drawercontent::-webkit-scrollbar-thumb {
+    background-color: #4a5568;
+    border-color: #182234;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .drawercontent::-webkit-scrollbar-thumb:hover {
+    background-color: #5b6578;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .breadcrumb-item,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .breadcrumb-item a {
+    color: #a8b0c3 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .form-control,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .form-select,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] textarea,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] select,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] input[type="text"],
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] input[type="email"],
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] input[type="number"],
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] input[type="search"],
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] input[type="password"] {
+    background-color: #182234 !important; /* stylelint-disable-line declaration-no-important */
+    border-color: #2a3346 !important; /* stylelint-disable-line declaration-no-important */
+    color: #e8eaf0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .form-control:focus,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .form-select:focus {
+    background-color: #182234 !important; /* stylelint-disable-line declaration-no-important */
+    color: #e8eaf0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+/* Placeholder text (e.g. "Search users" in the gradebook's user search) is a
+   pseudo-element with its own colour rule, so the field's own `color` fix
+   above never reaches it no matter how much !important it carries. Boost
+   gives it var(--bs-secondary-color) — rgba(29, 33, 37, 0.75), a near-black
+   tuned for a white field and effectively invisible on a dark one. Given the
+   file's established muted tone rather than full-strength body text, since a
+   placeholder is a hint and should stay subordinate to real input. No
+   !important needed: Bootstrap's own rule carries none. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .form-control::placeholder {
+    color: #a8b0c3;
+}
+
+/* An unchecked checkbox/radio paints its box from --bs-form-check-bg, which
+   Bootstrap defines as var(--bs-body-bg) — white, regardless of the page's
+   own dark background — with a mid-grey border. Redeclaring the custom
+   property here is the same override mechanism used for the plain .table
+   fix earlier in this file; the checked state already paints a solid
+   accent-blue box regardless of page background, so it needs no separate
+   fix. No !important: Boost's own .form-check-input rule doesn't carry one
+   either, so our extra specificity is already enough. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .form-check-input {
+    --bs-form-check-bg: #182234;
+    border-color: #4a5568;
+}
+
+/* The section/preferences collapse-expand toggle (.icons-collapse-expand) is
+   a second, more specific .btn-icon rule — two classes rather than one —
+   that paints its own light pill (a pale blue background behind a blue
+   chevron) rather than inheriting the plain .btn-icon colour fix above, so
+   it needs its own override at matching specificity. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .btn-icon.icons-collapse-expand {
+    background-color: #1e293d;
+    color: #5b9bf5;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .btn-icon.icons-collapse-expand:hover {
+    outline-color: #5b9bf5;
+}
+
+/* Moodle's combobox widgets (the gradebook's "Grader report" report picker,
+   its "Filter by name" initials widget, the single view grade search) render
+   as a bare .btn with no colour variant, so Bootstrap gives them
+   --bs-btn-color: var(--bs-body-color) — near-black, and var(--bs-body-color)
+   is left alone here for the same reason var(--bs-body-bg) is.
+   role="combobox" on a .btn.dropdown-toggle is core Moodle's own convention
+   for these (lib/templates/select_menu.mustache and comboboxsearch.mustache
+   both emit exactly that pairing), which makes it a far steadier hook than
+   the incidental utility classes around it, and narrow enough not to touch
+   the variant buttons (.btn-primary and friends) that set their own
+   --bs-btn-color and would be broken by a blanket .btn rule.
+   --bs-btn-hover-color is set alongside because bare .btn never defines it:
+   the var() reference is invalid, `color` falls back to the inherited value,
+   and the hover colour would otherwise depend on whatever happens to wrap
+   the widget. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .btn.dropdown-toggle[role="combobox"] {
+    --bs-btn-color: #e8eaf0;
+    --bs-btn-hover-color: #fff;
+}
+
+/* Outline buttons (e.g. CoIFish's "Log intervention") draw their resting
+   state as coloured text on a transparent fill, and Boost deliberately
+   darkens Bootstrap's stock values — #0f6cbf, #357a32, #ca3120, #a6670e,
+   #1f7e9a — to hit AA against a white page, which leaves them barely
+   separable from a dark one. Only the resting and disabled states need
+   lifting: hover, focus and active all fill with that same colour and put
+   white text on top, so they already read correctly whatever the page
+   behind them (which matches the reported behaviour — these buttons look
+   fine on hover and only fail at rest). Disabled reuses the lifted colour
+   and keeps Bootstrap's own --bs-btn-disabled-opacity: 0.65 to stay
+   visibly subordinate, rather than being dimmed twice into invisibility.
+   Hues come from the palette the .alert-* and CoIFish blocks already use.
+   .btn-outline-light is left alone: it is light by definition and is the
+   one variant that was already legible here. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .btn-outline-primary {
+    --bs-btn-color: #5b9bf5;
+    --bs-btn-border-color: #5b9bf5;
+    --bs-btn-disabled-color: #5b9bf5;
+    --bs-btn-disabled-border-color: #5b9bf5;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .btn-outline-secondary {
+    --bs-btn-color: #a8b0c3;
+    --bs-btn-border-color: #a8b0c3;
+    --bs-btn-disabled-color: #a8b0c3;
+    --bs-btn-disabled-border-color: #a8b0c3;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .btn-outline-success {
+    --bs-btn-color: #34d399;
+    --bs-btn-border-color: #34d399;
+    --bs-btn-disabled-color: #34d399;
+    --bs-btn-disabled-border-color: #34d399;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .btn-outline-danger {
+    --bs-btn-color: #f87171;
+    --bs-btn-border-color: #f87171;
+    --bs-btn-disabled-color: #f87171;
+    --bs-btn-disabled-border-color: #f87171;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .btn-outline-warning {
+    --bs-btn-color: #fbbf24;
+    --bs-btn-border-color: #fbbf24;
+    --bs-btn-disabled-color: #fbbf24;
+    --bs-btn-disabled-border-color: #fbbf24;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .btn-outline-info {
+    --bs-btn-color: #5bc0f8;
+    --bs-btn-border-color: #5bc0f8;
+    --bs-btn-disabled-color: #5bc0f8;
+    --bs-btn-disabled-border-color: #5bc0f8;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .btn-outline-dark {
+    --bs-btn-color: #e8eaf0;
+    --bs-btn-border-color: #7c8598;
+    --bs-btn-disabled-color: #e8eaf0;
+    --bs-btn-disabled-border-color: #7c8598;
+}
+
+/* Bootstrap's tooltip/popover components render in a portal appended to
+   <body>, outside every wrapper above, but the body-level dark-theme
+   attribute this whole section keys off is still their ancestor, so they
+   are reachable the same way .dropdown-menu is. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .popover {
+    background-color: #182234 !important; /* stylelint-disable-line declaration-no-important */
+    border-color: #2a3346 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .popover-header {
+    background-color: #1e293d !important; /* stylelint-disable-line declaration-no-important */
+    border-color: #2a3346 !important; /* stylelint-disable-line declaration-no-important */
+    color: #e8eaf0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .popover-body {
+    color: #e8eaf0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .tooltip .tooltip-inner {
+    background-color: #2a3346 !important; /* stylelint-disable-line declaration-no-important */
+    color: #e8eaf0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+/* The quiz overview report's "Highest grade" indicator (and any other
+   #page-mod-quiz-report .highlight) gets a light blue pill from mod_quiz's
+   own styles.css (border: 1px solid #bce8f1; background-color: #d9edf7),
+   layered under Boost's separate .highlight { color: #008196 } text-colour
+   rule. Neither was designed against a dark page, so the pill reads as an
+   odd light patch. Scoped to the quiz report specifically, rather than the
+   bare .highlight class Boost also uses for e.g. search-term highlighting
+   elsewhere, which should keep its own light styling untouched.
+   #page-mod-quiz-report is Moodle's own body id for this page — the same
+   element the .format-simple class and [data-simple-theme] attribute live
+   on — so this has to be one compound selector (no space before the id)
+   rather than body-then-descendant like the rest of this file; written as
+   a descendant combinator it would look for a *nested* element with that
+   id, which doesn't exist, and silently match nothing. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"]#page-mod-quiz-report .highlight {
+    background-color: #007dbb;
+    border-color: #007dbb;
+    color: #fff;
+}
+
+/* The A-Z name-filter bar (.initialbargroups, e.g. the quiz overview
+   report's "First name"/"Last name" jump links) is Bootstrap's .pagination
+   component, themed entirely through --bs-pagination-* custom properties —
+   --bs-pagination-bg defaults to var(--bs-body-bg), i.e. always white — the
+   same override mechanism already used for .table earlier in this file.
+   The active/current-letter state (--bs-pagination-active-bg, solid blue
+   with white text) already reads fine against a dark page as-is, so it is
+   left untouched. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .pagination {
+    --bs-pagination-bg: #182234;
+    --bs-pagination-border-color: #2a3346;
+    --bs-pagination-hover-bg: #1e293d;
+    --bs-pagination-hover-border-color: #2a3346;
+    --bs-pagination-focus-bg: #1e293d;
+    --bs-pagination-disabled-bg: #182234;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .initialbarlabel,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .mb-2 {
+    color: #e8eaf0;
+}
+
+/* mod_quiz ships its own styles.css (a third stylesheet, separate from
+   Boost/Boost Union) that paints the attempt-summary table's cells with
+   literal greys — table.quizreviewsummary th.cell/td.cell — bypassing the
+   .generaltable fix above entirely, since these more specific selectors
+   (element+class, twice) outrank a single .generaltable class. Matched
+   here at the same specificity so ours wins. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] table.quizreviewsummary th.cell {
+    background: #1e293d;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] table.quizreviewsummary td.cell {
+    background: #182234;
+}
+
+/* Same problem again: mod_quiz/styles.css marks a fully-graded attempt's
+   row (tr.gradedattempt, in the overview report table) with the same light
+   blue used for the "highest grade" pill — border-color: #bce8f1;
+   background-color: #d9edf7 — via body.path-mod-quiz .gradedattempt and two
+   more selectors for the cells themselves (a plain <td> and the sticky
+   name column need separate rules since the sticky column is repositioned
+   and would otherwise poke out from under a row-level background). .path-
+   mod-quiz is a second class Moodle puts directly on <body>, alongside
+   .format-simple, so it chains onto our usual selector as one more compound
+   class rather than a descendant — the same fix as the #page-mod-quiz-report
+   id lesson, just via a class instead of an id. Setting the border-color
+   shorthand (not just border-top-color, which the general .generaltable
+   fix already covers) matters here — it's what was still leaving a light
+   sliver on the other three edges of each row after that top-only fix. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"].path-mod-quiz .gradedattempt,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"].path-mod-quiz table tbody tr.gradedattempt > td,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"].path-mod-quiz
+table tbody tr.gradedattempt > td.sticky-column {
+    border-color: #1e5a7d;
+    background-color: #0f3a52;
+}
+
+/* A quiz question's .formulation (the question text itself), .outcome and
+   .comment (feedback panels) all paint their own explicit light pastel
+   background plus a matching dark text colour, the same way .generaltable
+   and .card do — so the general p/li text-colour fix elsewhere in this file
+   never reaches them; their own `color` declaration always wins over an
+   inherited one regardless of specificity. Each pairing below is darkened
+   together for exactly that reason: fixing only the background would leave
+   the box's own dark text sitting on top of it. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .que .formulation {
+    background-color: #182234;
+    border-color: #2a3346;
+    color: #e8eaf0;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .que .outcome {
+    background-color: #3a2e0f;
+    border-color: #5c491a;
+    color: #fbe6cf;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .que .comment {
+    background-color: #0f2e22;
+    border-color: #1a4a37;
+    color: #cdf2e2;
+}
+
+/* The question-number/state/grade/flag sidebar (.que .info) is Boost chrome
+   with its own hardcoded light-grey panel — same "light box left behind on
+   a dark page" issue .activity-header had elsewhere in this file — but,
+   unlike .formulation above, it sets no colour of its own on its child
+   divs (.state, .grade), which just inherit Boost's ordinary near-black
+   body text. That text needs its own fix here since .info > div is neither
+   a p/li (covered by the general rich-text rule) nor part of .formulation. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .que .info {
+    background-color: #182234;
+    border-color: #2a3346;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .que .info > div {
+    color: #e8eaf0;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .que .editquestion a {
+    color: #cfe0fb;
+}
+
+/* The draggable word/answer pills in this drag-and-drop question type
+   (.draggable.answers) turned out not to inherit a usable colour from
+   .formulation the way assumed above — confirmed against the live question
+   rather than that type's own stylesheet, which isn't present in this
+   project's codebase to inspect. Given an explicit background here rather
+   than one inferred blind. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .que .draggable.answers {
+    background: #0b4376;
+    color: #e8eaf0;
+}
+
+/* plagiarism_copyleaks's report widget (shown under a submitted assignment
+   or forum post) is a third-party plugin not present in this project's own
+   codebase to inspect directly, unlike the Boost/tiny_c4l/widgethub rules
+   above — its light-card-plus-dark-text pattern is inferred from its class
+   names rather than confirmed against its actual stylesheet, so this is a
+   best-effort dark treatment rather than a verified one. !important is used
+   defensively for that same reason: without sight of the source rules, this
+   assumes they may be at least as specific, the same posture taken for the
+   .alert-* and .twh-callout rules above when a rule turned out to carry
+   !important itself. The small score-level indicator dot is left alone — it
+   is almost certainly a solid semantic colour (green/amber/red for low/medium/high),
+   which stays legible on any background and risks looking wrong if
+   recoloured blind. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .cls-large-report-details {
+    background-color: #182234 !important; /* stylelint-disable-line declaration-no-important */
+    border-color: #2a3346 !important; /* stylelint-disable-line declaration-no-important */
+    color: #e8eaf0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .cls-text-result,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .cls-score-container {
+    color: #e8eaf0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+/* Bootstrap's .text-muted resolves to a mid-grey that disappears against
+   the dark page background — matched to the same colour the <p> fix below
+   uses, so muted and regular body text stay a single consistent shade.
+   Boost's own .text-muted rule is the one genuinely unavoidable case in
+   this file: it carries !important itself, so a plain declaration —
+   however specific — can never beat it; matching it here is the only way
+   to win, hence the explicit sniff exemption. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .text-muted {
+    color: #e8eaf0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+/* The automatic-completion badges' mix-blend-mode fix now lives with the
+   other .badge rules further down, keyed to the background utility rather
+   than to :first-child. core_course/completion_automatic.mustache only ever
+   emits three variants — .bg-success and .bg-danger for met/failed
+   conditions, and .bg-light.text-dark for pending ones — so :first-child was
+   wrong in both directions: it caught whichever pill happened to come first,
+   including a coloured one that needs no help, and missed the second pending
+   pill entirely. */
+
+/* Body copy inside an activity (mod/page and friends render their own rich
+   text directly, outside the format's own wrapper) is still Boost's
+   near-black default text colour, effectively invisible on the dark page
+   background introduced above. This is reading content, so it gets pushed
+   well past the general AA text minimum: #e8eaf0 against the #0f1420 page
+   background and #182234 card surface both measure comfortably above a
+   6:1 contrast ratio. Covers the plain-text elements a rich-text editor
+   actually produces — not span/div, which carry too much unrelated UI
+   (badges, pills, icons) to recolour wholesale. .text_to_html is the one
+   div-level exception: it is the exact wrapper format_text() puts around
+   FORMAT_HTML content (forum posts, feedback, etc — lib/outputrenderers.php),
+   so it is exactly as narrowly scoped as p/ul/li above, and it needs its own
+   entry because Moodle sometimes fills it with bare text nodes and <br>
+   rather than <p> children, which the element list above never reaches. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] p,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] ul,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] ol,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] li,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] dl,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] dt,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] dd,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] blockquote,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .text_to_html {
+    color: #e8eaf0;
+}
+
+/* A checkbox/advcheckbox form element's inline description — the text
+   passed as its second label, rendered as a bare <span id="{elementid}_
+   description"> right next to the input (lib/form/templates/element-
+   checkbox.mustache, element-advcheckbox.mustache) — carries no class at
+   all, so neither a class-based fix nor the p/li list above (span is
+   deliberately excluded there, as it carries too much unrelated UI) can
+   reach it. Moodle only ever uses this "_description" id suffix for this
+   one purpose, so the attribute selector is safe to match sitewide rather
+   than needing to be re-scoped per form. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] span[id$="_description"] {
+    color: #e8eaf0;
+}
+
+/* Activity/resource card titles (.aalink) inherit Boost's default link
+   colour, which is too dark to read comfortably against the dark card
+   surface. Lightened to rgba(96, 165, 226, 1) — checked at ~6:1 contrast
+   against the dark surface/background tokens above. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .format-simple-wrapper .aalink {
+    color: rgba(96, 165, 226, 1);
+}
+
+/* Two spots build their active-tab gradient from a literal light-mode hex
+   rather than the accent-light token; point them at the token so dark mode
+   repaints them too. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-nav-item.is-active,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-nav.is-collapsed .simple-nav-item.is-active {
+    background: linear-gradient(to right, var(--simple-accent-light), var(--simple-bg));
+}
+
+/* ---- Progress ring SVGs ----
+   These circles are drawn with literal fill/stroke attributes (inline SVG
+   presentation attributes carry the lowest CSS priority), so any rule here
+   wins over them without needing !important. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-progress-bg {
+    stroke: var(--simple-border);
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-progress-bar {
+    stroke: var(--simple-success);
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-progress-svg.is-complete circle {
+    fill: var(--simple-success);
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-progress-svg.is-complete polyline {
+    stroke: var(--simple-surface);
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-progress-svg.is-notstarted circle {
+    stroke: var(--simple-border);
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-progress-svg.is-untracked circle {
+    fill: var(--simple-border);
+}
+
+/* ---- tiny_c4l ("Content for Learning") and Widget Hub callouts ----
+   These TinyMCE-inserted content blocks (lib/editor/tiny/plugins/c4l/
+   styles.css) are teacher-authored rich text, so they turn up anywhere
+   format_text() runs — course content, forum posts, assignment feedback —
+   same as .text_to_html above. Each variant hardcodes its own light pastel
+   background plus, in most cases, no explicit text colour of its own (it
+   inherits the surrounding paragraph colour), which is exactly why the
+   general p/li dark-text rule above was enough to make the text legible but
+   left the light pastel background behind it — light text on a light card.
+   Both halves are overridden together here. The plugin emits two class
+   prefixes for the same components — c4l- (editor/edit-mode markup) and
+   c4lv- (viewer/rendered markup) — so both are targeted throughout.
+   !important matches the .alert-* treatment above: this is another
+   plugin's CSS painting its own explicit colours, external to this
+   stylesheet's own cascade. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-keyconcept,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-keyconcept,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-allpurposecard,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-allpurposecard,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-learningoutcomes,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-learningoutcomes,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-tag,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-tag,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-estimatedtime,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-estimatedtime,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-duedate,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-duedate,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-gradingvalue,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-gradingvalue {
+    background-color: #142943 !important; /* stylelint-disable-line declaration-no-important */
+    color: #cfe0fb !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-keyconcept,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-keyconcept {
+    border-left-color: #5b9bf5 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-tip,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-tip {
+    background-color: #3a1a34 !important; /* stylelint-disable-line declaration-no-important */
+    border-left-color: #d16fc4 !important; /* stylelint-disable-line declaration-no-important */
+    color: #f0d9ec !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-reminder,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-reminder {
+    background-color: #0f2c3a !important; /* stylelint-disable-line declaration-no-important */
+    border-left-color: #5bc0f8 !important; /* stylelint-disable-line declaration-no-important */
+    color: #d3edfb !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-attention,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-attention {
+    background-color: #3a2a12 !important; /* stylelint-disable-line declaration-no-important */
+    border-left-color: #fbbf24 !important; /* stylelint-disable-line declaration-no-important */
+    color: #fbe6cf !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-dodontcards-do,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-dodontcards-do {
+    background: #0f2e22 !important; /* stylelint-disable-line declaration-no-important */
+    color: #cdf2e2 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-dodontcards-dont,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-dodontcards-dont {
+    background: #3a1418 !important; /* stylelint-disable-line declaration-no-important */
+    color: #f9d6d9 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-readingcontext,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-readingcontext,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-example,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-example,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-expectedfeedback,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-expectedfeedback,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-conceptreview,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-conceptreview,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-furtherreading,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-furtherreading {
+    background-color: #182234 !important; /* stylelint-disable-line declaration-no-important */
+    color: #e8eaf0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-example h1,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-example h1 {
+    color: #5b9bf5 !important; /* stylelint-disable-line declaration-no-important */
+    border-bottom-color: #5b9bf5 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-conceptreview .c4l-concept-review-title,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-conceptreview .c4l-concept-review-title {
+    color: #d16fc4 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-furtherreading .c4l-further-reading-title,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-furtherreading .c4l-further-reading-title {
+    color: #5bc0f8 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-aiuseallowed,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-aiuseallowed {
+    background-color: #0f2e22 !important; /* stylelint-disable-line declaration-no-important */
+    color: #34d399 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-aiusenotallowed,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-aiusenotallowed {
+    background-color: #3a1418 !important; /* stylelint-disable-line declaration-no-important */
+    color: #f87171 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-aiusereported,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-aiusereported {
+    background-color: #3a2a12 !important; /* stylelint-disable-line declaration-no-important */
+    color: #fbbf24 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+/* Text-only variants: no background of their own, just a hardcoded literal
+   colour tuned for a white page, too dark to read against the dark page
+   background/card surfaces introduced above. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-proceduralcontext,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-proceduralcontext {
+    color: #93b4f5 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4l-figure figcaption,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .c4lv-figure figcaption {
+    color: #a8b0c3 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+/* .c4l-learningoutcomes-title keeps its own solid blue pill with white text
+   in both themes — already legible against a dark card, so left untouched. */
+
+/* ---- Plain Bootstrap .table (Widget Hub tables, etc.) ----
+   Unlike .generaltable, this is stock Boost/Bootstrap 5 table CSS, which
+   themes itself through custom properties rather than literal colours:
+   .table > :not(caption) > * > * reads background-color from
+   var(--bs-table-bg), which .table itself defines as var(--bs-body-bg) —
+   i.e. always white, regardless of the page's own dark background — and
+   text colour from var(--bs-table-color)/var(--bs-emphasis-color), always
+   near-black. Redeclaring those same custom properties here, on the same
+   .table element the originals are declared on, is the override mechanism
+   Bootstrap's own table theming is built around — it needs no !important
+   and no fight over descendant-selector specificity, since every cell
+   underneath simply reads the new values through the same var() call.
+   table-group-divider's border-top: ... solid currentcolor follows the
+   text-colour fix automatically, for the same reason. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .table {
+    --bs-table-bg: #182234;
+    --bs-table-color: #e8eaf0;
+    --bs-emphasis-color: #e8eaf0;
+    --bs-table-border-color: #2a3346;
+    border-color: #2a3346;
+}
+
+/* ---- Bootstrap utility backgrounds (e.g. a "jumbotron" bg-light panel) ----
+   Every Bootstrap .bg-* utility carries !important itself (it is meant to
+   always win over a component's own background), so overriding it needs
+   the same exemption already used for .text-muted/.alert-* above — no
+   selector, however specific, beats it without matching that !important. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .bg-light {
+    background-color: #182234 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+/* .bg-white and .bg-body-tertiary turn up in the unified grading panel's
+   own header (mod_assign/mod_quiz's marking interface) — same story as
+   .bg-light above, and the same !important is required for the same
+   reason. .bg-white reads rgba(var(--bs-white-rgb), var(--bs-bg-opacity))
+   rather than a plain background-color, but that only affects how Bootstrap
+   computes ITS value; ours still overrides the resulting background-color
+   property outright. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .bg-white {
+    background-color: #182234 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .bg-body-tertiary {
+    background-color: #1e293d !important; /* stylelint-disable-line declaration-no-important */
+}
+
+/* Darkening those .bg-* utilities above leaves anything pairing them with a
+   .text-dark/.text-black utility (activity completion badges are the common
+   case: .badge.rounded-pill.bg-light.text-dark) with near-black text on a
+   now-dark fill. Those text utilities carry their own !important, so this
+   needs one too. Deliberately keyed to the three surfaces this file actually
+   darkens rather than to .text-dark on its own: on a fill that is still
+   genuinely light in dark mode — .bg-warning, .bg-info and friends, which
+   are untouched — near-black is the *correct* pairing, and a blanket
+   .text-dark override would wreck exactly those, the same trap the CoIFish
+   black-on-cyan badge posed. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"]
+:is(.bg-light, .bg-white, .bg-body-tertiary):is(.text-dark, .text-black) {
+    color: #e8eaf0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+/* A badge is a chip that has to separate from whatever it sits on, and these
+   sit on cards this file already paints #182234 — so the plain .bg-light
+   mapping above would render them the same tone as their own background and
+   make them all but disappear, which is the second half of the reported
+   problem. Badges therefore get the elevated surface tone used elsewhere for
+   tracks and tooltips instead. Higher specificity than the .bg-* rules above
+   (two classes rather than one), so this wins for badges while panels keep
+   the flatter tone that suits them against the page.
+   plus-lighter then adds the chip to whatever is behind it rather than
+   covering it, which lifts it clear of the card without having to hardcode a
+   brighter tone: over the #182234 card the #2a3346 fill lands around #42557a.
+   Being backdrop-relative is the point — it keeps its separation over the
+   page, a card or a modal alike — but it is also the caveat: on a genuinely
+   light surface the chip and its text would both blow out towards white.
+   These badges only ever sit on dark surfaces in this theme, so that case
+   does not arise today; if it ever does, a flat background-color: #42557a
+   reproduces the same look here without the blend.
+   invert(1) then flips the chip to a bright, near-white pill so it actually
+   registers as a chip rather than a slightly lighter patch of card. Filters
+   apply before blending, so the two compose predictably: the #2a3346 fill
+   inverts to a light tan and the blend lifts it to roughly #ededed, while
+   the text inverts from #e8eaf0 down to a dark slate that lands near
+   #2f3743 over it — around 11:1, comfortably legible.
+   That text path is deliberately roundabout and worth knowing before
+   editing: the .text-dark override above lightens the text precisely so
+   this inversion can bring it back down. Change one without the other and
+   the pill loses its contrast.
+   This also carries the mix-blend-mode fix these badges used to get from a
+   separate :first-child rule (removed above): Boost sets multiply on
+   .path-mod .automatic-completion-conditions .badge, which crushes a light
+   pill toward black on a dark page. That selector is (0,3,0) against this
+   one's (0,5,1), so this wins without needing !important, and it applies to
+   both pending pills while leaving the .bg-success/.bg-danger ones alone —
+   inverting those would send green to magenta. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .badge:is(.bg-light, .bg-white, .bg-body-tertiary) {
+    background-color: #2a3346 !important; /* stylelint-disable-line declaration-no-important */
+    mix-blend-mode: plus-lighter;
+    filter: invert(1);
+}
+
+/* The unified grader's own nav dropdown (local_unifiedgrader) paints a
+   literal white background — no !important, so our usual extra specificity
+   is enough on its own, unlike the Bootstrap .bg-* utilities above. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .local-unifiedgrader-nav-dropdown {
+    background-color: #182234;
+    border-color: #2a3346;
+}
+
+/* The grade-entry input group's addon spans (e.g. the unified grader's
+   "/ 40" max-grade and "(73%)" percentage badges either side of the grade
+   input) read background-color from var(--bs-tertiary-bg) — Boost's light
+   grey, not the page's own dark background. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .input-group-text {
+    background-color: #1e293d;
+    border-color: #2a3346;
+    color: #e8eaf0;
+}
+
+/* The unified grader's student-profile popout (local_unifiedgrader) is
+   another literal #fff background/light border, same story as the nav
+   dropdown and grade addons above. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .local-unifiedgrader-profile-popout {
+    background: #182234;
+    border-color: #2a3346;
+}
+
+/* The gradebook grader report (#user-grades / .gradereport-grader-table)
+   doesn't get its cell backgrounds from Bootstrap's own .table machinery at
+   all — Boost's compiled CSS carries a grader-specific rule that paints
+   every .cell with background-color: var(--bs-body-bg) directly, bypassing
+   the --bs-table-bg override on .table used everywhere else in this file
+   (var(--bs-body-bg) is never touched by that fix, deliberately, since
+   redefining it sitewide would be much harder to audit for side effects
+   than overriding --bs-table-bg per component).
+   .path-grade-report-grader is one of the path-* classes Moodle builds from
+   the script path and puts on <body> itself (lib/pagelib.php), so it chains
+   onto our selector as another compound class — with a space it would be
+   asking for a nested element that does not exist and would match nothing
+   at all, which is exactly the trap the #page-mod-quiz-report highlight fix
+   further up this file already documents. Painting the cells is also the
+   only thing that works: a background on <tbody> sits *behind* the cells,
+   and these cells set their own opaque background, so it would never be
+   visible no matter how much !important it carried. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"].path-grade-report-grader .gradeparent tr .cell,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"].path-grade-report-grader .gradeparent .floater .cell {
+    background-color: #182234;
+}
+
+/* ---- Widget Hub ("tiny_widgethub") callouts ----
+   lib/editor/tiny/plugins/widgethub/styles.css paints .twh-callout and its
+   four contextual variants (important/warning/example/extension) the same
+   light-pastel-background-plus-hardcoded-dark-text way tiny_c4l's callouts
+   do above, so they need the same paired background+text treatment.
+   .twh-callout-body's #374151 text colour is shared by every variant
+   (only the title/icon get a variant colour), so one rule fixes body text
+   everywhere; the base/variant rules below only need to handle each one's
+   distinct background, border-left accent, and title/icon colour. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-callout-body {
+    color: #e8eaf0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-callout {
+    background-color: #182234 !important; /* stylelint-disable-line declaration-no-important */
+    border-left-color: #7c8598 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-callout-important {
+    background-color: #3a2a12 !important; /* stylelint-disable-line declaration-no-important */
+    border-left-color: #fbbf24 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-callout-important .twh-callout-title,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-callout-important .twh-callout-icon {
+    color: #fbbf24 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-callout-warning {
+    background-color: #3a1418 !important; /* stylelint-disable-line declaration-no-important */
+    border-left-color: #f87171 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-callout-warning .twh-callout-title,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-callout-warning .twh-callout-icon {
+    color: #f87171 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-callout-example {
+    background-color: #0f2e22 !important; /* stylelint-disable-line declaration-no-important */
+    border-left-color: #34d399 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-callout-example .twh-callout-title,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-callout-example .twh-callout-icon {
+    color: #34d399 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-callout-extension {
+    background-color: #142943 !important; /* stylelint-disable-line declaration-no-important */
+    border-left-color: #5b9bf5 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-callout-extension .twh-callout-title,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-callout-extension .twh-callout-icon {
+    color: #5b9bf5 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+/* ---- Widget Hub quote and text-fragment components ----
+   .twh-quote hardcodes both a light lavender background and its own
+   #222222 text colour (rather than inheriting the page's text colour the
+   way the callouts above do), so both need overriding; .twh-quote cite
+   only sets opacity, not its own colour, so fixing .twh-quote's colour
+   fixes the citation too. The decorative oversized quote-mark glyphs
+   (:before/:after) are a low-alpha purple tuned to sit faintly on a white
+   card; brightened here so they stay visible at the same low-key alpha on
+   a dark one instead of disappearing into it. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-quote {
+    background: #182234 !important; /* stylelint-disable-line declaration-no-important */
+    color: #e8eaf0 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-quote::before,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-quote::after {
+    color: rgba(139, 148, 255, 0.35) !important; /* stylelint-disable-line declaration-no-important */
+}
+
+/* .twh-fragment is a "torn paper stack" effect: the visible card is a
+   plain white background, with two ::before/::after layers in a slightly
+   different light grey peeking out from behind at a rotation to look like
+   loose sheets underneath — lighter than the page around it either way, so
+   the stack reads as paper sitting on a surface. #182234/#0f1420 (this
+   file's ordinary card-surface/page tokens) turned out to be the wrong
+   choice here: the surrounding content area is already painted with those
+   same two tones, so the "paper" was exactly the same colour as the table
+   it was sitting on and vanished. This card needs its own lighter tones,
+   one step up from --simple-surface, to actually stand out the way the
+   white card stands out against Boost's off-white light-mode page. Main
+   card lighter than the peeking layers, same relationship as the original
+   #fff-over-#f6f6f6. Text colour is already handled by the general h4/p
+   rules elsewhere in this file — .twh-fragment sets none of its own. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-fragment {
+    background: #2a3a56 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-fragment::before,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .twh-fragment::after {
+    background: #1e2b40 !important; /* stylelint-disable-line declaration-no-important */
+}
+
+/* ---- Dark mode toggle button ----
+   Sits in the same fixed left rail as the cog and course-info buttons, and
+   is appended directly to <body> — outside the wrapper — so it cannot read
+   the wrapper's scoped tokens and gets its own literal colours below,
+   matching the light-mode values already used by its neighbours. */
+.format-simple .simple-darkmode-wrap {
+    position: relative;
+    margin-top: 6px;
+}
+
+.format-simple .simple-darkmode-btn {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border: none;
+    border-radius: 0 10px 10px 0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+    font-size: 1.25rem;
+    color: #6b7280;
+    cursor: pointer;
+    transition: color 200ms, background 200ms;
+}
+
+.format-simple .simple-darkmode-btn:hover,
+.format-simple .simple-darkmode-btn[aria-expanded="true"] {
+    color: #2563eb;
+    background: #f0f4ff;
+}
+
+.format-simple .simple-darkmode-popover {
+    position: absolute;
+    top: 0;
+    left: 48px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 10px rgba(0, 0, 0, 0.06);
+    padding: 16px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-12px);
+    transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1), transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 220px;
+    z-index: 1041;
+}
+
+.format-simple .simple-darkmode-popover.is-open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+}
+
+.format-simple .simple-darkmode-heading {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 10px 4px;
+}
+
+.format-simple .simple-darkmode-options {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.format-simple .simple-darkmode-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #374151;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.format-simple .simple-darkmode-option i {
+    width: 18px;
+    text-align: center;
+    color: #6b7280;
+}
+
+.format-simple .simple-darkmode-option:hover {
+    background: #f0f4ff;
+}
+
+.format-simple .simple-darkmode-option.is-active {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+}
+
+.format-simple .simple-darkmode-option.is-active i {
+    color: #1d4ed8;
+}
+
+.format-simple .simple-darkmode-schedule {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.format-simple .simple-darkmode-timelabel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.format-simple .simple-darkmode-timelabel input[type="time"] {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 4px 6px;
+    font-size: 0.75rem;
+    color: #1a1a1a;
+    background: #fff;
+}
+
+/* The toggle button itself lives outside the wrapper's dark scope, so it
+   needs its own dark palette to match the rest of the fixed rail below.
+   Now that the outer page background goes dark too (see below), these
+   buttons are lifted a shade lighter than that background, with a border
+   and a paler shadow, so they still read as distinct floating tabs rather
+   than blending into the page behind them. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-darkmode-btn,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-cog-btn,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-home-btn,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-s0-modal-btn {
+    background: #1e293d;
+    color: #a8b0c3;
+    border: 1px solid #2f3b54;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-darkmode-btn:hover,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-darkmode-btn[aria-expanded="true"],
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-cog-btn:hover,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-home-btn:hover,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-s0-modal-btn:hover {
+    background: #142943;
+    color: #5b9bf5;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-cog-btn.is-open {
+    background: #142943;
+    color: #5b9bf5;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-darkmode-popover,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-cog-popover {
+    background: #1e293d;
+    border: 1px solid #2f3b54;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35), 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-darkmode-heading,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-cog-heading {
+    color: #7c8598;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-darkmode-option,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-cog-tile {
+    color: #a8b0c3;
+    background: #26324a;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-darkmode-option i {
+    color: #a8b0c3;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-darkmode-option:hover,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-cog-tile:hover {
+    background: #142943;
+    color: #5b9bf5;
+    border-color: #1e3a5f;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-darkmode-option.is-active,
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-cog-tile.is-active {
+    background: #16304d;
+    border-color: #2b5484;
+    color: #8fbdfb;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-darkmode-option.is-active i {
+    color: #8fbdfb;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-cog-tile-icon {
+    background: #182234;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-cog-tile.is-active .simple-cog-tile-icon {
+    background: #5b9bf5;
+    color: #0f1420;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-darkmode-schedule {
+    border-top-color: #2a3346;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-darkmode-timelabel {
+    color: #a8b0c3;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-darkmode-timelabel input[type="time"] {
+    background: #0f1420;
+    border-color: #2a3346;
+    color: #e8eaf0;
+    color-scheme: dark;
+}
+
+/* ---- Section 0 modal (also outside the wrapper) ---- */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-s0-modal {
+    background: #182234;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-s0-modal-close {
+    background: rgba(255, 255, 255, 0.08);
+    color: #a8b0c3;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .simple-s0-modal-close:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #e8eaf0;
+}
+
+/* ---- Native form controls, scrollbars ----
+   Tells the browser to draw its own chrome (scrollbars, date/time pickers,
+   and — see the dropdown fix below — a <select>'s native open option list)
+   in dark colours so they do not stand out as a light-mode leftover.
+   Declared body-wide as well as on the wrapper, since plenty of pages with
+   dark mode active (forum discussions, quiz pages, settings forms) render
+   their controls entirely outside the format's own wrapper. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] {
+    color-scheme: dark;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .format-simple-wrapper {
+    color-scheme: dark;
+}
+
+/* Dropdowns (<select class="form-select">, e.g. the forum display-mode
+   picker) paint an explicit light background/border and a dark-stroked
+   arrow icon baked into --bs-form-select-bg-img as an inline SVG — none of
+   that comes from inheritable page colours, so it stays light-themed no
+   matter what the surrounding page does. Background/border/text are
+   overridden directly; the arrow is redrawn with two small gradient
+   triangles rather than another SVG (Moodle's stylesheet lint disallows
+   data: URLs), coloured to match the rest of the dark palette. The closed
+   control is styled here; color-scheme: dark above additionally asks the
+   browser to draw the *open* native option list in dark chrome, which CSS
+   cannot otherwise reach. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .form-select {
+    background-color: #182234;
+    color: #e8eaf0;
+    border-color: #2a3346;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #a8b0c3 50%),
+        linear-gradient(135deg, #a8b0c3 50%, transparent 50%);
+    background-position: calc(100% - 20px) center, calc(100% - 15px) center;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+}
+
+/* =========================================================================
+   CoIFish (gradereport_coifish) — dark mode
+   =========================================================================
+   This plugin ships ~2100 lines of its own CSS built entirely on literal
+   light-theme colours: white/grey panel fills, and dark body, muted and
+   severity-emphasis text tuned to sit on them. Its outermost cards happen to
+   carry Bootstrap's .card class, so the .card fix earlier in this file turns
+   those dark — which is precisely what made the plugin unreadable rather
+   than merely light: dark text stranded on a now-dark surface.
+   Backgrounds and text are therefore fixed together here, the same pairing
+   rule the .card/.generaltable/.alert-* blocks above follow. Fixing only the
+   text would have broken the sub-panels that still paint their own white
+   (.gradetracker-stat-chip, .gradereport-coifish-pulse-hero-inner, and the
+   rest of the surface list below), which are perfectly legible as they are.
+   :is() keeps this readable at ~100 selectors; it is well within Moodle 5.0's
+   browser baseline and was verified to survive the theme CSS combiner, which
+   silently drops some newer CSS (color-mix(), as noted further up).
+   Note :is() takes the specificity of its most specific argument, which
+   flattens the relative ordering the plugin's own stylesheet relies on, so
+   the groups below run neutral -> muted -> success -> info -> warning ->
+   danger: every contextual override (.gradetracker-stat-risk
+   .gradetracker-stat-value over .gradetracker-stat-value, .gradetracker-
+   widget-risk .gradetracker-widget-header over .gradetracker-widget-header)
+   sits in a later group so it still wins on a specificity tie.
+   Deliberately left alone: .gradeoverview-extension-badge (#000 on a bright
+   #0dcaf0 fill) and .gradeoverview-late-badge (#fff on #dc3545) — both are
+   coloured chips that read correctly in either theme, and "fixing" their
+   text would break them. Severity hues reuse the palette the .alert-*
+   overrides above established, so CoIFish matches the rest of dark mode
+   rather than introducing a second set of reds, ambers and greens.
+   Longer term this belongs in CoIFish itself; it lives here because dark
+   mode is this format's feature and reaches sitewide. */
+
+/* ---- Base text ----
+   Much of CoIFish's copy sets no colour of its own at all and simply
+   inherits from <body> — Boost's near-black --bs-body-color, which this file
+   deliberately leaves alone. The insight cards' diagnostic paragraphs are
+   the clearest example: neither .gradetracker-insight-diagnostic nor
+   .gradetracker-insight-label nor their .gradetracker-insight-card-body
+   parent declares a colour, so none of the per-selector groups below could
+   ever have reached them (those were derived by scanning the plugin's own
+   `color:` declarations, which by definition cannot see inherited text).
+   Setting the colour on the plugin's own root containers instead fixes that
+   whole class of problem at once, including any markup added later.
+   It has to be the containers rather than a blanket match on every
+   CoIFish-classed element: inheritance always yields to an explicit
+   declaration on a descendant, so the plugin's own deliberate colours still
+   win — .gradeoverview-extension-badge keeps its black-on-cyan, the coloured
+   chips keep their white, and every group below keeps its severity hue. A
+   blanket element match would out-specify all of those and break them.
+   Container list is every root emitted by grade/report/coifish/templates. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.gradereport-coifish,
+.gradereport-coifish-actionbar,
+.gradereport-coifish-coordinator,
+.gradereport-coifish-summary,
+.gradereport-coifish-pulse,
+.gradetracker-insights,
+.gradetracker-cohort-insights,
+.gradetracker-coi-section,
+.gradetracker-goal-planner,
+.gradetracker-intervention-history,
+.gradetracker-longitudinal-profile,
+.gradetracker-presence-card,
+.gradetracker-progress-container,
+.gradetracker-progress-bar-group,
+.gradetracker-levels-wrap,
+.gradetracker-optslider-wrap,
+.gradetracker-slider-wrap,
+.gradeoverview-category) {
+    color: #e8eaf0;
+}
+
+/* ---- Surfaces ---- */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.gradetracker-goal-card,
+.gradetracker-widget,
+.gradetracker-profile-rec,
+.gradetracker-presence-card,
+.gradereport-coifish-pulse-hero-inner,
+.gradereport-coifish-pulse-card,
+.gradereport-coifish-pulse-ring-inner) {
+    background: #182234;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.gradetracker-feedback-details,
+.gradetracker-longitudinal-profile,
+.gradetracker-stat-chip,
+.gradetracker-presence-bars,
+.gradetracker-detail-metric-chip,
+.gradereport-coifish-pulse-access,
+.gradereport-coifish-coordinator .card-header) {
+    background: #1e293d;
+}
+
+/* Neutral tracks and "empty/locked" states — mid greys in the original. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.gradetracker-stacked-bar,
+.gradetracker-badge-locked,
+.gradetracker-presence-dot-none,
+.gradetracker-zone-none) {
+    background: #2a3346;
+}
+
+/* Tinted recommendation/header panels: the original pastel washes are far
+   too light to survive here, so each becomes the dark tint of the same hue
+   already used by the .que .outcome and .alert-* blocks above. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .gradetracker-profile-rec-danger {
+    background: #2c1618;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.gradetracker-profile-rec-warning,
+.gradetracker-detail-header-warning) {
+    background: #3a2e0f;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .gradetracker-insight-card {
+    border-color: #2a3346;
+}
+
+/* ---- Text: neutral body copy ---- */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.gradereport-coifish .text-muted td,
+.gradereport-coifish tr.text-muted td,
+.gradetracker-goal-planner-title,
+.gradetracker-coi-title,
+.gradetracker-coi-breakdown-count,
+.gradetracker-cohort-section-title,
+.gradetracker-presence-count,
+.gradetracker-presence-bar-label,
+.gradetracker-detail-section-title,
+.gradetracker-detail-text,
+.gradetracker-detail-threshold-label,
+.gradetracker-selfreg-explain,
+.gradetracker-selfreg-indicator-label,
+.gradetracker-stat-value,
+.gradetracker-detail-metric-value,
+.gradereport-coifish-pulse-help-inner,
+.gradereport-coifish-pulse-drill-text,
+.gradereport-coifish-pulse-access,
+.gradereport-coifish-pulse-hero-band,
+.gradereport-coifish-pulse-badge-name,
+.gradereport-coifish-pulse-card-label) {
+    color: #e8eaf0;
+}
+
+/* ---- Text: muted/secondary ---- */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.gradetracker-legend-item,
+.gradetracker-goal-card-label,
+.gradetracker-goal-card-message,
+.gradetracker-goal-missed .gradetracker-goal-card-value,
+.gradetracker-widget-header,
+.gradetracker-widget-sub,
+.gradetracker-trend-steady,
+.gradetracker-feedback-viewed .gradetracker-feedback-link,
+.gradetracker-coi-breakdown,
+.gradetracker-stat-label,
+.gradetracker-cohort-subsection-title,
+.gradetracker-detail-link,
+.gradetracker-logdata-table thead th,
+.gradetracker-detail-metric-label,
+.gradetracker-selfreg-explain-btn,
+.gradetracker-selfreg-explain dd,
+.gradetracker-levels-label-text,
+.gradereport-coifish-pulse-sub,
+.gradereport-coifish-pulse-hero-caption,
+.gradereport-coifish-pulse-badge-sub,
+.gradereport-coifish-pulse-drill-heading,
+.gradereport-coifish-pulse-duedates-nudge,
+.gradereport-coifish-pulse-help-btn) {
+    color: #a8b0c3;
+}
+
+/* ---- Text: success ---- */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.gradereport-coifish .gradeoverview-category td a,
+.gradetracker-threshold-pass::before,
+.gradetracker-goal-achieved .gradetracker-goal-card-value,
+.gradetracker-widget-improvement .gradetracker-widget-hero.text-success,
+.gradetracker-trend-up,
+.gradetracker-selfregulation-strong,
+.gradetracker-consistency-excellent,
+.gradetracker-earlybird-ahead,
+.gradetracker-risk-healthy .gradetracker-insights-risk-icon,
+.gradereport-coifish-pulse-help-inner strong,
+.gradereport-coifish-pulse-suggestions-title,
+.gradereport-coifish-pulse-access-ok) {
+    color: #34d399;
+}
+
+/* ---- Text: info / primary accent ---- */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.gradetracker-widget-guidance,
+.gradetracker-insight-info .gradetracker-insight-card-header,
+.gradetracker-insight-info .gradetracker-insight-action,
+.gradetracker-detail-header-info) {
+    color: #5bc0f8;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.gradereport-coifish .gradetracker-running-percentage,
+.gradetracker-running-percentage.text-primary,
+.gradetracker-threshold-merit::before,
+.gradetracker-widget-overall .gradetracker-widget-hero,
+.gradetracker-selfregulation-moderate,
+.gradetracker-consistency-good,
+.gradetracker-earlybird-ontrack,
+.gradetracker-detail-link:hover) {
+    color: #5b9bf5;
+}
+
+/* ---- Text: warning ---- */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.gradetracker-widget-action,
+.gradetracker-insight-warning .gradetracker-insight-card-header,
+.gradetracker-insight-warning .gradetracker-insight-action,
+.gradetracker-detail-header-warning,
+.gradetracker-widget-risk .gradetracker-widget-header) {
+    color: #fbbf24;
+}
+
+/* ---- Text: danger ---- */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.gradetracker-insight-danger .gradetracker-insight-card-header,
+.gradetracker-insight-danger .gradetracker-insight-action,
+.gradetracker-detail-header-danger,
+.gradetracker-widget-improvement .gradetracker-widget-hero.text-danger,
+.gradetracker-trend-down,
+.gradetracker-earlybird-behind,
+.gradetracker-risk-high .gradetracker-insights-risk-icon,
+.gradetracker-stat-risk .gradetracker-stat-value) {
+    color: #f87171;
+}
+
+/* ---- Student pulse widget tokens ----
+   The plugin already funnels this widget's colours through five custom
+   properties, so redefining them on the same element they are declared on
+   repaints every var() reference at once — the mechanism the .table and
+   .format-simple-wrapper token blocks above use. The track is a light grey
+   fill rather than text, hence the surface tone rather than a text one. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .gradereport-coifish-pulse {
+    --coifish-pulse-accent: #34d399;
+    --coifish-pulse-track: #2a3346;
+    --coifish-pulse-up: #34d399;
+    --coifish-pulse-down: #fb923c;
+    --coifish-pulse-same: #a8b0c3;
+}
+
+/* =========================================================================
+   TinyMCE (editor_tiny / TinyMCE 7 "oxide" skin) — dark mode
+   =========================================================================
+   The oxide skin hardcodes every colour — it exposes no custom properties at
+   all, so there is no token layer to redirect and each surface has to be
+   named. What follows repaints the editor *chrome*: menubar, toolbars,
+   status bar, and the icon/label colours that sit on them.
+   The editing canvas is not reachable from this file at all. It is an
+   <iframe>, and TinyMCE loads theme_config::editor_css_url() into it — a
+   separate, much smaller bundle built by editor_css_files(), which collects
+   only editor plugins' own editor_styles.css plus the theme's editor_sheets.
+   A course format's styles.css is not among them, so nothing written here
+   reaches inside; a body.mce-content-body rule added to this file has no
+   effect whatsoever, however it is scoped. (It would also have no dark-mode
+   signal to key on if it did arrive: the iframe's <body> carries neither the
+   .format-simple class nor the [data-simple-theme] attribute, so an unscoped
+   rule would repaint the canvas in light mode too.)
+   The canvas is therefore handled from JavaScript instead — see
+   applyTinyContentTheme() in amd/src/cognav.js, which injects a small
+   stylesheet into each editor's own document and removes it again on the way
+   back to light. Everything below is the surrounding chrome only. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.tox .tox-menubar,
+.tox .tox-toolbar-overlord,
+.tox .tox-toolbar,
+.tox .tox-toolbar__primary,
+.tox .tox-toolbar__overflow,
+.tox .tox-sidebar,
+.tox:not(.tox-tinymce-inline) .tox-editor-header,
+.tox.tox-tinymce-inline .tox-editor-header,
+.tox:not(.tox-tinymce-inline).tox-tinymce--toolbar-sticky-on .tox-editor-header,
+.tox.tox-tinymce-aux .tox-toolbar__overflow) {
+    background-color: #1e293d;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .tox .tox-statusbar {
+    background-color: #1e293d;
+    border-top-color: #2a3346;
+    color: #a8b0c3;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.tox .tox-statusbar a,
+.tox .tox-statusbar__path-item,
+.tox .tox-statusbar__wordcount,
+.tox .tox-label,
+.tox .tox-toolbar-label) {
+    color: #a8b0c3;
+}
+
+/* Toolbar and menubar buttons.
+   These are not transparent chips sitting on the toolbar, as their flat
+   appearance suggests — the skin paints every one of them background: #fff
+   outright, and only looks flat because the toolbar behind them is white
+   too. Recolouring their text without that made things worse rather than
+   better: near-white labels stranded on white blocks.
+   So each state needs its own pairing. Resting matches the toolbar so the
+   buttons stay visually flat exactly as they do in the light skin, and
+   hover/pressed step up from there to keep the same relative ordering the
+   original design uses (a light-grey hover and a blue pressed state over a
+   white base become a lighter-slate hover and a blue-slate pressed state
+   over a dark one). */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.tox .tox-mbtn,
+.tox .tox-tbtn,
+.tox .tox-mbtn[disabled],
+.tox .tox-mbtn:focus:not(:disabled),
+.tox .tox-tbtn:focus,
+.tox .tox-tbtn--disabled,
+.tox .tox-tbtn--disabled:hover,
+.tox .tox-tbtn:disabled,
+.tox .tox-tbtn:disabled:hover,
+.tox .tox-split-button:focus) {
+    background: #1e293d;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.tox .tox-mbtn:hover:not(:disabled):not(.tox-mbtn--active),
+.tox .tox-tbtn:hover,
+.tox .tox-tbtn--bespoke,
+.tox .tox-tbtn--bespoke:focus) {
+    background: #2a3346;
+}
+
+/* Pressed/enabled state (Bold while the cursor sits in bold text, and the
+   open menubar item) — the skin's #a6ccf7 is a pale blue that would glare
+   here, so it becomes the same deep blue the link focus indicator uses. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.tox .tox-mbtn--active,
+.tox .tox-mbtn:not(:disabled).tox-mbtn--active:focus,
+.tox .tox-tbtn:active,
+.tox .tox-tbtn--active,
+.tox .tox-tbtn--enabled,
+.tox .tox-tbtn--enabled:hover,
+.tox .tox-tbtn--enabled:focus) {
+    background: #1e3a5f;
+}
+
+/* Labels and icons across every state. TinyMCE's own icons are inline <path>
+   SVGs painted from a hardcoded fill rather than currentColor, and the skin
+   re-asserts that dark fill separately for :hover, :active and :focus — so
+   recolouring the resting state alone would leave the glyphs flipping back
+   to near-black the moment a button is used. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.tox .tox-mbtn,
+.tox .tox-mbtn--active,
+.tox .tox-mbtn:hover:not(:disabled):not(.tox-mbtn--active),
+.tox .tox-tbtn,
+.tox .tox-tbtn:hover,
+.tox .tox-tbtn:active,
+.tox .tox-tbtn--active,
+.tox .tox-tbtn--enabled,
+.tox .tox-tbtn:focus:not(.tox-tbtn--disabled)) {
+    color: #fefeff;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.tox .tox-mbtn svg,
+.tox .tox-tbtn svg,
+.tox .tox-tbtn:hover svg,
+.tox .tox-tbtn:active svg,
+.tox .tox-tbtn:focus:not(.tox-tbtn--disabled) svg) {
+    fill: #fefeff;
+}
+
+/* Disabled buttons keep the skin's "dimmed" relationship rather than the
+   full-strength label above, which would make them look available. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.tox .tox-mbtn[disabled],
+.tox .tox-tbtn--disabled,
+.tox .tox-tbtn--disabled:hover,
+.tox .tox-tbtn:disabled,
+.tox .tox-tbtn:disabled:hover) {
+    color: #7c8598;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.tox .tox-tbtn--disabled svg,
+.tox .tox-tbtn:disabled svg,
+.tox .tox-tbtn--disabled .tox-tbtn--enabled svg) {
+    fill: #7c8598;
+}
+
+/* Buttons contributed by Moodle's own tiny_* subplugins (WidgetHub, C4L,
+   H5P, the recorder) are not path SVGs at all — they are <image> elements
+   pointing at theme/image.php monologos, i.e. flat dark silhouettes that
+   `fill` cannot touch. Inverting is the same trick .simple-cm-icon and the
+   .alert dismiss button already use for exactly this problem. The
+   data-buttonsource attribute is Moodle's own marker for these, so it
+   separates them cleanly from TinyMCE's built-in icons above, which must
+   keep their fill treatment instead. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .tox svg[data-buttonsource="moodle"] {
+    filter: invert(1) brightness(1.4);
+}
+
+/* ---- TinyMCE dialogs (source code view, link editor, image properties) ----
+   These render in the parent document rather than the editor iframe, so
+   ordinary CSS reaches them. Note the backdrop is a *white* 75% veil in the
+   light skin, which on a dark page washes the whole thing out — it needs
+   flipping as much as the panel does.
+   The primary .tox-button is left alone throughout: it is white on #006ce7,
+   which reads correctly against any background. Only the secondary and naked
+   variants, which assume a light panel behind them, are repainted. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .tox .tox-dialog-wrap__backdrop {
+    background-color: rgba(6, 10, 20, 0.75);
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .tox .tox-dialog-wrap__backdrop--opaque {
+    background-color: #0f1420;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .tox .tox-dialog {
+    background-color: #182234;
+    border-color: #2a3346;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.tox .tox-dialog__header,
+.tox .tox-dialog__footer) {
+    background-color: #182234;
+    color: #e8eaf0;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.tox .tox-dialog__title,
+.tox .tox-dialog__body,
+.tox .tox-dialog__body-content .tox-form__group h1,
+.tox .tox-dialog__body-content .tox-form__group h2) {
+    color: #e8eaf0;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .tox .tox-dialog__body-content svg {
+    fill: #e8eaf0;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.tox .tox-dialog__body-nav-item,
+.tox .tox-label,
+.tox .tox-dialog__body-content .tox-form__group--error) {
+    color: #a8b0c3;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.tox .tox-dialog__body-content a,
+.tox .tox-dialog__body-nav-item--active) {
+    color: #5b9bf5;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.tox .tox-dialog__body-content a:hover,
+.tox .tox-dialog__body-content a:focus,
+.tox .tox-dialog__body-content a:active) {
+    color: #8fc0ff;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .tox .tox-dialog__body-nav-item--active {
+    border-bottom-color: #5b9bf5;
+}
+
+/* Secondary ("Cancel") and naked (the header's close X) buttons. */
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .tox .tox-button--secondary {
+    background-color: #2a3346;
+    border-color: #2a3346;
+    color: #e8eaf0;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.tox .tox-button--secondary:hover:not(:disabled),
+.tox .tox-button--secondary:focus:not(:disabled)) {
+    background-color: #354063;
+    border-color: #354063;
+    color: #e8eaf0;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .tox .tox-button--naked {
+    color: #e8eaf0;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] :is(
+.tox .tox-button--naked:hover:not(:disabled),
+.tox .tox-button--naked:focus:not(:disabled)) {
+    background-color: rgba(232, 234, 240, 0.12);
+    color: #e8eaf0;
+}
+
+body.format-simple[data-simple-theme="dark"][data-simple-theme="dark"] .tox .tox-dialog__table tbody tr {
+    border-bottom-color: #2a3346;
+}

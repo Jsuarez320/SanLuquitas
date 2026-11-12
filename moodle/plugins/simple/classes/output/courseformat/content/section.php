@@ -1,0 +1,873 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Section output class for format_simple.
+ *
+ * @package    format_simple
+ * @copyright  2025 South African Theological Seminary <ict@sats.ac.za>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+namespace format_simple\output\courseformat\content;
+
+use core_courseformat\output\local\content\section as section_base;
+use renderer_base;
+use stdClass;
+
+/**
+ * Section output class.
+ *
+ * Categorises activities into three zones and prepares data for inline
+ * content embedding, resource icons, and learning outcomes display.
+ */
+class section extends section_base {
+    /**
+     * Returns the template name for this output class.
+     *
+     * @param renderer_base $renderer The renderer.
+     * @return string The template name.
+     */
+    public function get_template_name(renderer_base $renderer): string {
+        return 'format_simple/local/content/section';
+    }
+
+    /**
+     * Export this data so it can be used as the context for a mustache template.
+     *
+     * @param renderer_base $output The renderer.
+     * @return stdClass Template data.
+     */
+    public function export_for_template(renderer_base $output): stdClass {
+        global $PAGE;
+
+        $format = $this->format;
+        $course = $format->get_course();
+        $section = $this->section;
+        $modinfo = $format->get_modinfo();
+
+        $data = new stdClass();
+        $data->num = (int) $section->section;
+        $data->id = (int) $section->id;
+        $data->name = $format->get_section_name($section);
+        $data->isactive = false;
+        $data->editing = $PAGE->user_is_editing();
+
+        // Section summary — rewrite @@PLUGINFILE@@ tokens before formatting.
+        $data->summary = '';
+        if (!empty($section->summary)) {
+            $context = \context_course::instance($course->id);
+            $summarytext = file_rewrite_pluginfile_urls(
+                $section->summary,
+                'pluginfile.php',
+                $context->id,
+                'course',
+                'section',
+                $section->id
+            );
+            $data->summary = format_text(
+                $summarytext,
+                $section->summaryformat,
+                ['noclean' => true, 'overflowdiv' => true, 'context' => $context]
+            );
+        }
+        $data->hassummary = !empty($data->summary);
+
+        // Learning outcomes.
+        $data->outcomes = $this->get_outcomes($section, $format);
+        $data->hasoutcomes = !empty($data->outcomes);
+
+        // Editing controls.
+        $data->sectioncontrolmenu = '';
+        $data->hassectioncontrolmenu = false;
+        $data->cmcontrols = '';
+        $data->hascmcontrols = false;
+
+        if ($data->editing) {
+            $coursecontext = \context_course::instance($course->id);
+
+            // Section control menu (edit, hide, delete, duplicate, move).
+            if (has_capability('moodle/course:update', $coursecontext)) {
+                $controlmenuclass = $format->get_output_classname('content\\section\\controlmenu');
+                $controlmenu = new $controlmenuclass($format, $section);
+                $controlmenudata = $controlmenu->export_for_template($output);
+                if (!empty($controlmenudata->menu)) {
+                    $data->sectioncontrolmenu = $output->render_from_template(
+                        'core_courseformat/local/content/section/controlmenu',
+                        $controlmenudata
+                    );
+                    $data->hassectioncontrolmenu = true;
+                }
+            }
+
+            // Add an activity or resource button.
+            if (has_capability('moodle/course:manageactivities', $coursecontext)) {
+                $data->cmcontrols = $output->course_section_add_cm_control(
+                    $course,
+                    (int) $section->section,
+                    null
+                );
+                $data->hascmcontrols = !empty($data->cmcontrols);
+            }
+        }
+
+        // Section 0 flag — used by the template for flat list rendering.
+        $data->issection0 = ((int) $section->section === 0);
+
+        // Build activity lists.
+        $data->learningcontent = [];
+        $data->resources = [];
+        $data->activities = [];
+        $data->allcms = [];
+
+        // A label introduces whatever the teacher put after it, so it is carried along by that
+        // activity rather than given a place of its own. Zone grouping reorders activities, and
+        // a label pinned to a fixed spot would end up introducing something else entirely.
+        $pendinglabels = [];
+
+        $cms = $modinfo->get_cms();
+        foreach ($cms as $cm) {
+            if ($cm->section != $section->id) {
+                continue;
+            }
+            if (!$cm->is_visible_on_course_page()) {
+                continue;
+            }
+
+            $zone = \format_simple::get_activity_zone($cm);
+            if ($zone === 'hidden') {
+                continue;
+            }
+            $cmdata = $this->build_cm_data($cm, $course, $zone, $output);
+
+            if ($data->issection0) {
+                // Section 0 is a flat list in the teacher's own order, so nothing moves and
+                // labels can simply take their turn.
+                $data->allcms[] = $cmdata;
+                continue;
+            }
+
+            if ($zone === 'label') {
+                $pendinglabels[] = $cmdata;
+                continue;
+            }
+
+            $cmdata->precedinglabels = $pendinglabels;
+            $cmdata->hasprecedinglabels = !empty($pendinglabels);
+            $pendinglabels = [];
+
+            switch ($zone) {
+                case 'learning':
+                    $data->learningcontent[] = $cmdata;
+                    break;
+                case 'resources':
+                    $data->resources[] = $cmdata;
+                    break;
+                default:
+                    $data->activities[] = $cmdata;
+                    break;
+            }
+        }
+
+        // Labels the teacher left at the end have nothing to introduce, so they stay at the end.
+        $data->traillabels = $pendinglabels;
+        $data->hastraillabels = !empty($pendinglabels);
+
+        $data->hasallcms = !empty($data->allcms);
+        $data->haslearningcontent = !empty($data->learningcontent);
+        $data->hasresources = !empty($data->resources);
+        $data->hasactivities = !empty($data->activities);
+
+        // Prepare the primary learning content for inline display.
+        // Use the teacher-selected primary item if set, otherwise default to the first.
+        if ($data->haslearningcontent) {
+            $primarycmid = (int) ($format->get_format_options($section)['primarycontent'] ?? 0);
+            $primaryindex = 0;
+            if ($primarycmid > 0) {
+                foreach ($data->learningcontent as $i => $item) {
+                    if ((int) $item->id === $primarycmid) {
+                        $primaryindex = $i;
+                        break;
+                    }
+                }
+            }
+            $primary = $data->learningcontent[$primaryindex];
+            $primary->isprimary = true;
+            // Only the featured item is displayed in place, so only it gets core's completion
+            // controls; the rest of the zone renders as cards with the compact indicator.
+            if (!empty($primary->hasinlinecontent) || !empty($primary->hasembedurl)) {
+                $this->apply_inplace_completion($primary, $modinfo->get_cm((int) $primary->id));
+            }
+            $data->learningcontent[$primaryindex] = $primary;
+        }
+
+        // Section completion progress.
+        $progress = \format_simple::get_section_progress($section, $course);
+        $data->progress = $progress;
+        $data->iscomplete = ($progress->status === 'complete');
+        $data->isinprogress = ($progress->status === 'inprogress');
+
+        // Availability.
+        $data->isrestricted = !$section->uservisible && $section->visible;
+        $data->availabilityinfo = '';
+        if ($data->isrestricted && !empty($section->availableinfo)) {
+            $data->availabilityinfo = $this->render_availability_info($section->availableinfo, $output);
+        }
+
+        // Strings for template.
+        $data->str_learningcontent = get_string('zone_learningcontent', 'format_simple');
+        $data->str_resources = get_string('zone_resources', 'format_simple');
+        $data->str_activities = get_string('zone_activities', 'format_simple');
+        $data->str_outcomes = get_string('outcomesbtn', 'format_simple');
+        $data->str_nooutcomes = get_string('nooutcomes', 'format_simple');
+
+        return $data;
+    }
+
+    /**
+     * Build template data for a single course module.
+     *
+     * @param \cm_info $cm The course module info.
+     * @param stdClass $course The course object.
+     * @param string $zone The zone this module belongs to.
+     * @param renderer_base $output The renderer.
+     * @return stdClass Course module template data.
+     */
+    private function build_cm_data(\cm_info $cm, stdClass $course, string $zone, renderer_base $output): stdClass {
+        global $PAGE, $USER;
+
+        $cmdata = new stdClass();
+        $cmdata->id = $cm->id;
+        $cmdata->zone = $zone;
+        $cmdata->islabel = ($zone === 'label');
+
+        // The teacher's own note about this activity, shown when they asked for it. Labels are
+        // nothing but their text, so they have no separate description to show.
+        $cmdata->description = '';
+        if (!$cmdata->islabel && !empty($cm->showdescription) && !empty($cm->content)) {
+            $cmdata->description = $cm->content;
+        }
+        $cmdata->hasdescription = ($cmdata->description !== '');
+        $cmdata->name = $cm->get_formatted_name();
+        $cmdata->modname = $cm->modname;
+        $cmdata->url = $cm->url ? $cm->url->out(false) : '';
+        // A Q&A forum holding one discussion for this student opens that discussion directly.
+        if ($cm->modname === 'forum' && \format_simple::get_single_forum_discussion($cm) !== null) {
+            $cmdata->url = (new \moodle_url('/course/format/simple/forumview.php', ['id' => $cm->id]))->out(false);
+        }
+        $cmdata->iconurl = $cm->get_icon_url()->out(false);
+        $cmdata->uservisible = $cm->uservisible;
+        $cmdata->ishidden = !$cm->visible;
+        $cmdata->isstealth = $cm->is_stealth();
+        $cmdata->isprimary = false;
+        $cmdata->editing = $PAGE->user_is_editing();
+
+        // Completion state. Activity cards show a compact indicator of their own; content
+        // rendered in place gets core's fuller treatment, added further down once we know
+        // whether the module is displayed in place.
+        $cmdata->completionenabled = ($cm->completion != COMPLETION_TRACKING_NONE);
+        $cmdata->ismanualcompletion = ($cm->completion == COMPLETION_TRACKING_MANUAL);
+        $cmdata->iscomplete = false;
+        if ($cmdata->completionenabled) {
+            $completion = new \completion_info($course);
+            $completiondata = $completion->get_data($cm, true, $USER->id);
+            $cmdata->iscomplete = (
+                $completiondata->completionstate == COMPLETION_COMPLETE
+                || $completiondata->completionstate == COMPLETION_COMPLETE_PASS
+            );
+        }
+        // Machine readable state for the section progress ring, which must not depend on
+        // the shape of any completion markup.
+        $cmdata->completionstate = $cmdata->iscomplete ? 'complete' : 'incomplete';
+        $cmdata->completiontooltip = $this->get_completion_tooltip($cm, $cmdata);
+        $cmdata->completionlabel = $this->get_completion_label($cm, $cmdata);
+        $cmdata->hasindicator = !empty($cmdata->completionenabled);
+
+        // Unread forum post count, shown as a badge next to the activity name.
+        $cmdata->unreadcount = ($cm->modname === 'forum') ? $this->get_forum_unread_count($cm, $course) : 0;
+        $cmdata->hasunread = ($cmdata->unreadcount > 0);
+        $cmdata->unreadlabel = $cmdata->hasunread
+            ? get_string('unreadcount', 'format_simple', $cmdata->unreadcount) : '';
+
+        // Availability restrictions.
+        $cmdata->isrestricted = !$cm->uservisible && $cm->visible;
+        $cmdata->availabilityinfo = '';
+        $cmdata->availabilitytext = '';
+        if ($cmdata->isrestricted && !empty($cm->availableinfo)) {
+            $cmdata->availabilityinfo = $this->render_availability_info($cm->availableinfo, $output);
+            $cmdata->availabilitytext = strip_tags($cmdata->availabilityinfo);
+        }
+
+        // Inline content detection — runs for all zones so section 0's flat
+        // list can hide the card when a module provides rendered content.
+        $cmdata->inlinecontent = $this->get_inline_content($cm);
+        $cmdata->hasinlinecontent = !empty($cmdata->inlinecontent);
+
+        // Zone-specific data.
+        if ($zone === 'resources') {
+            $cmdata->faicon = \format_simple::get_resource_icon($cm);
+        }
+
+        if ($zone === 'learning') {
+            $cmdata->embedurl = $this->get_embed_url($cm);
+            $cmdata->hasembedurl = !empty($cmdata->embedurl);
+            $cmdata->isembedh5p = ($cm->modname === 'h5pactivity' && $cmdata->hasembedurl);
+            $cmdata->isembedscorm = ($cm->modname === 'scorm' && $cmdata->hasembedurl);
+            $cmdata->isembedlti = ($cm->modname === 'lti' && $cmdata->hasembedurl);
+        }
+
+        // View tracking, after the zone blocks so embedded content is covered too. Applies to
+        // every zone because section 0's flat list also renders modules inline.
+        $this->add_view_tracking_data($cmdata, $cm);
+
+        // Content shown in place carries its indicator inside the content itself and leaves out
+        // the view condition. Section 0 shows every module inline; elsewhere only the featured
+        // one does, and that is not settled until the featured item has been chosen, so it is
+        // applied later by apply_inplace_completion().
+        if ((int) $this->section->section === 0 && !empty($cmdata->hasinlinecontent)) {
+            $this->apply_inplace_completion($cmdata, $cm);
+        }
+
+        // Activity editing controls.
+        $cmdata->editablename = '';
+        $cmdata->haseditablename = false;
+        $cmdata->cmcontrolmenu = '';
+        $cmdata->hascmcontrolmenu = false;
+        if ($cmdata->editing) {
+            $cmdata->editablename = $this->get_editable_name($cm, $output);
+            $cmdata->haseditablename = ($cmdata->editablename !== '');
+
+            $format = $this->format;
+            $sectioninfo = $format->get_modinfo()->get_section_info_by_id($cm->section);
+            $controlmenuclass = $format->get_output_classname('content\\cm\\controlmenu');
+            $controlmenu = new $controlmenuclass($format, $sectioninfo, $cm);
+            $controlmenudata = $controlmenu->export_for_template($output);
+            if (!empty($controlmenudata->menu)) {
+                $cmdata->cmcontrolmenu = $output->render_from_template(
+                    'core_courseformat/local/content/cm/controlmenu',
+                    $controlmenudata
+                );
+                $cmdata->hascmcontrolmenu = true;
+            }
+        }
+
+        return $cmdata;
+    }
+
+    /**
+     * Count unread posts for a single forum, for the current user.
+     *
+     * @param \cm_info $cm The forum course module.
+     * @param stdClass $course The course object.
+     * @return int Unread post count.
+     */
+    private function get_forum_unread_count(\cm_info $cm, stdClass $course): int {
+        global $CFG;
+
+        if (empty($CFG->forum_trackreadposts) || !$cm->uservisible) {
+            return 0;
+        }
+
+        require_once($CFG->dirroot . '/mod/forum/lib.php');
+
+        return forum_tp_count_forum_unread_posts($cm, $course);
+    }
+
+    /**
+     * Modules whose view event can be raised from JavaScript.
+     *
+     * Content shown inline is never opened through the activity's own view.php, so the view
+     * event that ordinarily records the visit and satisfies view based completion never
+     * happens. Each of these modules exposes a mod_<name>_view_<name> web service that raises
+     * exactly that event, which the JavaScript calls once the content has been seen.
+     *
+     * Keyed by module name, holding the service name and the name of its instance id
+     * parameter. Every module names that parameter after itself rather than using a common
+     * one, so it has to be carried through to the caller.
+     *
+     * @var array<string, array{0: string, 1: string}>
+     */
+    private const VIEW_SERVICES = [
+        'book' => ['mod_book_view_book', 'bookid'],
+        'folder' => ['mod_folder_view_folder', 'folderid'],
+        'h5pactivity' => ['mod_h5pactivity_view_h5pactivity', 'h5pactivityid'],
+        'lesson' => ['mod_lesson_view_lesson', 'lessonid'],
+        'lti' => ['mod_lti_view_lti', 'ltiid'],
+        'page' => ['mod_page_view_page', 'pageid'],
+        'resource' => ['mod_resource_view_resource', 'resourceid'],
+        'scorm' => ['mod_scorm_view_scorm', 'scormid'],
+        'url' => ['mod_url_view_url', 'urlid'],
+    ];
+
+    /**
+     * Add the data JavaScript needs to raise a module's view event.
+     *
+     * Only added for content actually rendered in place. Anything the student has to click
+     * through to reaches its own view.php and records the visit the usual way.
+     *
+     * @param stdClass $cmdata The course module template data, modified in place.
+     * @param \cm_info $cm The course module info.
+     */
+    private function add_view_tracking_data(stdClass $cmdata, \cm_info $cm): void {
+        $cmdata->hasviewtracking = false;
+
+        $renderedinplace = !empty($cmdata->hasinlinecontent) || !empty($cmdata->hasembedurl);
+        if (!$renderedinplace || !$cm->uservisible) {
+            return;
+        }
+
+        if (!isset(self::VIEW_SERVICES[$cm->modname])) {
+            return;
+        }
+
+        [$service, $param] = self::VIEW_SERVICES[$cm->modname];
+        $cmdata->viewservice = $service;
+        $cmdata->viewparam = $param;
+        $cmdata->viewinstance = (int) $cm->instance;
+        $cmdata->hasviewtracking = true;
+    }
+
+    /**
+     * A short statement of what the activity asks of the student.
+     *
+     * Shown beside the indicator on hover, where waiting for a browser tooltip would be more
+     * friction than the answer is worth. Deliberately says only what is required, leaving the
+     * indicator's fill to say whether it has been done yet.
+     *
+     * @param \cm_info $cm The course module info.
+     * @param stdClass $cmdata The course module template data built so far.
+     * @param bool $excludeview Whether to leave out the view condition.
+     * @return string Label text, empty when completion is not tracked.
+     */
+    private function get_completion_label(\cm_info $cm, stdClass $cmdata, bool $excludeview = false): string {
+        if (empty($cmdata->completionenabled)) {
+            return '';
+        }
+
+        if (!empty($cmdata->ismanualcompletion)) {
+            return get_string('completion_manual:markdone', 'course');
+        }
+
+        $descriptions = array_map(
+            fn($detail) => $detail->description,
+            $this->get_completion_conditions($cm, $excludeview)
+        );
+
+        return implode(', ', $descriptions);
+    }
+
+    /**
+     * Describe an activity's completion conditions for the indicator's tooltip.
+     *
+     * The indicator itself is deliberately just a shape, so the conditions behind it need to be
+     * readable on hover and to assistive technology. Core's own wording is reused so that the
+     * phrasing matches the rest of Moodle and stays translated. Unlike the label, this says
+     * whether each condition has been met.
+     *
+     * @param \cm_info $cm The course module info.
+     * @param stdClass $cmdata The course module template data built so far.
+     * @param bool $excludeview Whether to leave out the view condition.
+     * @return string Tooltip text, empty when there is nothing useful to say.
+     */
+    private function get_completion_tooltip(\cm_info $cm, stdClass $cmdata, bool $excludeview = false): string {
+        if (empty($cmdata->completionenabled)) {
+            return '';
+        }
+
+        if (!empty($cmdata->ismanualcompletion)) {
+            return get_string(
+                $cmdata->iscomplete ? 'completion_manual:done' : 'completion_manual:markdone',
+                'course'
+            );
+        }
+
+        $lines = [];
+        foreach ($this->get_completion_conditions($cm, $excludeview) as $detail) {
+            $complete = in_array($detail->status, [COMPLETION_COMPLETE, COMPLETION_COMPLETE_PASS], true);
+            if ($detail->status == COMPLETION_COMPLETE_FAIL) {
+                $prefix = get_string('completion_automatic:failed', 'course');
+            } else {
+                $prefix = get_string(
+                    $complete ? 'completion_automatic:done' : 'completion_automatic:todo',
+                    'course'
+                );
+            }
+            $lines[] = $prefix . ' ' . $detail->description;
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * An activity's automatic completion conditions.
+     *
+     * @param \cm_info $cm The course module info.
+     * @param bool $excludeview Whether to leave out the view condition. Content shown in place
+     *      is marked viewed by this format as soon as the student has seen it, and the section
+     *      progress ring already reflects that, so asking them to view what they are reading
+     *      says nothing.
+     * @return \stdClass[] Condition details, each with a status and a description.
+     */
+    private function get_completion_conditions(\cm_info $cm, bool $excludeview): array {
+        global $USER;
+
+        $details = \core_completion\cm_completion_details::get_instance($cm, $USER->id, true)->get_details();
+
+        if ($excludeview) {
+            unset($details['completionview']);
+        }
+
+        return array_values($details);
+    }
+
+    /**
+     * Render the activity name as an inplace editable, so it can be renamed without leaving
+     * the course page.
+     *
+     * Core's title output is used rather than its whole cmname block, because this format
+     * supplies its own icon and card layout and only wants the editable name itself. The
+     * markup carries a link to the activity, so the name stays clickable while editing.
+     *
+     * @param \cm_info $cm The course module info.
+     * @param renderer_base $output The renderer.
+     * @return string Rendered markup, empty when the activity has no name to edit.
+     */
+    private function get_editable_name(\cm_info $cm, renderer_base $output): string {
+        $format = $this->format;
+        $sectioninfo = $format->get_modinfo()->get_section_info_by_id($cm->section);
+        if ($sectioninfo === null) {
+            return '';
+        }
+
+        $titleclass = $format->get_output_classname('content\\cm\\title');
+        $title = new $titleclass($format, $sectioninfo, $cm);
+        $titledata = $title->export_for_template($output);
+        if (empty($titledata)) {
+            return '';
+        }
+
+        return $output->render_from_template($title->get_template_name($output), $titledata);
+    }
+
+    /**
+     * Adjust an activity's completion indicator for content rendered in place.
+     *
+     * The view condition is dropped, because this format marks such content viewed as soon as
+     * the student has seen it and the section progress ring already reflects that. Where
+     * viewing was the only requirement there is nothing left to say, so no indicator is shown.
+     *
+     * @param stdClass $cmdata The course module template data, modified in place.
+     * @param \cm_info $cm The course module info.
+     */
+    private function apply_inplace_completion(stdClass $cmdata, \cm_info $cm): void {
+        if (empty($cmdata->completionenabled)) {
+            return;
+        }
+
+        $cmdata->completionlabel = $this->get_completion_label($cm, $cmdata, true);
+        $cmdata->completiontooltip = $this->get_completion_tooltip($cm, $cmdata, true);
+        $cmdata->hasindicator = !empty($cmdata->ismanualcompletion) || $cmdata->completionlabel !== '';
+    }
+
+    /**
+     * Get inline content for a learning content module (page or book).
+     *
+     * @param \cm_info $cm The course module info.
+     * @return string HTML content to render inline, or empty string.
+     */
+    private function get_inline_content(\cm_info $cm): string {
+        global $DB;
+
+        if (!$cm->uservisible) {
+            return '';
+        }
+
+        if ($cm->modname === 'page') {
+            return $this->get_page_inline_content($cm);
+        }
+
+        if ($cm->modname === 'book') {
+            return $this->get_book_inline_content($cm);
+        }
+
+        // A label is nothing but its text, and always carries showdescription, so it is taken
+        // at face value rather than run through the check below.
+        if ($cm->modname === 'label') {
+            return (string) $cm->content;
+        }
+
+        // Fall back to content provided by the module via the standard Moodle cm_info callback
+        // (e.g. mod_courseschedule with showinline enabled). A module that is only showing its
+        // description uses the same callback, and that belongs in the card, not in its place.
+        if (!empty($cm->content) && empty($cm->showdescription)) {
+            return $cm->content;
+        }
+
+        return '';
+    }
+
+    /**
+     * Get inline content for a mod_page activity.
+     *
+     * @param \cm_info $cm The course module info.
+     * @return string HTML content or empty string.
+     */
+    private function get_page_inline_content(\cm_info $cm): string {
+        global $DB;
+
+        $page = $DB->get_record('page', ['id' => $cm->instance], 'content, contentformat');
+        if (!$page) {
+            return '';
+        }
+
+        $context = \context_module::instance($cm->id);
+        $content = file_rewrite_pluginfile_urls(
+            $page->content,
+            'pluginfile.php',
+            $context->id,
+            'mod_page',
+            'content',
+            0
+        );
+
+        return format_text($content, $page->contentformat, [
+            'noclean' => true,
+            'context' => $context,
+        ]);
+    }
+
+    /**
+     * Get inline content for a mod_book activity.
+     *
+     * Fetches all visible chapters and renders them sequentially.
+     *
+     * @param \cm_info $cm The course module info.
+     * @return string HTML content or empty string.
+     */
+    private function get_book_inline_content(\cm_info $cm): string {
+        global $DB;
+
+        $chapters = $DB->get_records(
+            'book_chapters',
+            ['bookid' => $cm->instance, 'hidden' => 0],
+            'pagenum ASC'
+        );
+        if (!$chapters) {
+            return '';
+        }
+
+        $context = \context_module::instance($cm->id);
+        $content = '';
+        foreach ($chapters as $chapter) {
+            $chaptercontent = file_rewrite_pluginfile_urls(
+                $chapter->content,
+                'pluginfile.php',
+                $context->id,
+                'mod_book',
+                'chapter',
+                $chapter->id
+            );
+            $tag = $chapter->subchapter ? 'h4' : 'h3';
+            $content .= '<' . $tag . '>' . format_string($chapter->title) . '</' . $tag . '>';
+            $content .= format_text($chaptercontent, $chapter->contentformat, [
+                'noclean' => true,
+                'context' => $context,
+            ]);
+        }
+        return $content;
+    }
+
+    /**
+     * Get an embed URL for inline iframe display.
+     *
+     * Supports video URLs (YouTube/Vimeo) and H5P activities.
+     *
+     * @param \cm_info $cm The course module info.
+     * @return string Embed URL or empty string.
+     */
+    private function get_embed_url(\cm_info $cm): string {
+        global $DB;
+
+        if (!$cm->uservisible) {
+            return '';
+        }
+
+        // H5P activity — embed via the core H5P player (clean, no Moodle chrome).
+        if ($cm->modname === 'h5pactivity') {
+            return $this->get_h5p_embed_url($cm);
+        }
+
+        // SCORM activity — embed via the Moodle SCORM player in popup mode.
+        if ($cm->modname === 'scorm') {
+            return $this->get_scorm_embed_url($cm);
+        }
+
+        // LTI activity — embed via the Moodle LTI launch page.
+        if ($cm->modname === 'lti') {
+            return $this->get_lti_embed_url($cm);
+        }
+
+        // URL module — check for YouTube/Vimeo video embeds.
+        if ($cm->modname !== 'url') {
+            return '';
+        }
+
+        $urlrecord = $DB->get_record('url', ['id' => $cm->instance], 'externalurl');
+        if (!$urlrecord || empty($urlrecord->externalurl)) {
+            return '';
+        }
+
+        $url = $urlrecord->externalurl;
+
+        // YouTube detection.
+        if (
+            preg_match(
+                '/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/',
+                $url,
+                $matches
+            )
+        ) {
+            return 'https://www.youtube-nocookie.com/embed/' . $matches[1] . '?rel=0';
+        }
+
+        // Vimeo detection.
+        if (preg_match('/vimeo\.com\/(?:video\/)?(\d+)/', $url, $matches)) {
+            return 'https://player.vimeo.com/video/' . $matches[1];
+        }
+
+        return '';
+    }
+
+    /**
+     * Get the embed URL for an H5P activity via the core H5P player.
+     *
+     * @param \cm_info $cm The course module info.
+     * @return string Embed URL or empty string.
+     */
+    private function get_h5p_embed_url(\cm_info $cm): string {
+        $context = \context_module::instance($cm->id);
+        $fs = get_file_storage();
+        $files = $fs->get_area_files($context->id, 'mod_h5pactivity', 'package', 0, 'id', false);
+        $file = reset($files);
+        if (!$file) {
+            return '';
+        }
+
+        $fileurl = \moodle_url::make_pluginfile_url(
+            $file->get_contextid(),
+            $file->get_component(),
+            $file->get_filearea(),
+            $file->get_itemid(),
+            $file->get_filepath(),
+            $file->get_filename()
+        );
+        $embedurl = new \moodle_url('/h5p/embed.php', ['url' => $fileurl->out(false)]);
+        return $embedurl->out(false);
+    }
+
+    /**
+     * Get the embed URL for a SCORM activity via the Moodle SCORM player.
+     *
+     * Uses popup display mode for a clean embedded layout without Moodle chrome.
+     *
+     * @param \cm_info $cm The course module info.
+     * @return string Embed URL or empty string.
+     */
+    private function get_scorm_embed_url(\cm_info $cm): string {
+        global $DB;
+
+        // Find the first launchable SCO.
+        $sco = $DB->get_record_select(
+            'scorm_scoes',
+            'scorm = ? AND ' . $DB->sql_isnotempty('scorm_scoes', 'launch', false, true),
+            [$cm->instance],
+            'id',
+            IGNORE_MULTIPLE
+        );
+        if (!$sco) {
+            return '';
+        }
+
+        $embedurl = new \moodle_url('/mod/scorm/player.php', [
+            'cm' => $cm->id,
+            'scoid' => $sco->id,
+            'display' => 'popup',
+        ]);
+        return $embedurl->out(false);
+    }
+
+    /**
+     * Get the embed URL for an LTI activity via the Moodle LTI launch page.
+     *
+     * @param \cm_info $cm The course module info.
+     * @return string Embed URL or empty string.
+     */
+    private function get_lti_embed_url(\cm_info $cm): string {
+        $launchurl = new \moodle_url('/mod/lti/launch.php', [
+            'id' => $cm->id,
+            'triggerview' => 0,
+        ]);
+        return $launchurl->out(false);
+    }
+
+    /**
+     * Get learning outcomes for a section.
+     *
+     * @param \section_info $section The section info.
+     * @param \core_courseformat\base $format The course format.
+     * @return array Array of outcome objects with 'text' property.
+     */
+    private function get_outcomes(\section_info $section, \core_courseformat\base $format): array {
+        $options = $format->get_format_options($section);
+        $raw = $options['learningoutcomes'] ?? '';
+        if (empty($raw)) {
+            return [];
+        }
+
+        $lines = explode("\n", $raw);
+        $outcomes = [];
+        foreach ($lines as $line) {
+            $text = trim($line);
+            if ($text !== '') {
+                $outcome = new stdClass();
+                $outcome->text = format_string($text);
+                $outcomes[] = $outcome;
+            }
+        }
+
+        return $outcomes;
+    }
+
+    /**
+     * Render availability info to an HTML string.
+     *
+     * Handles both plain strings and core_availability_multiple_messages renderables.
+     *
+     * @param string|\core_availability_multiple_messages $info The availability info.
+     * @param renderer_base $output The renderer.
+     * @return string Rendered HTML.
+     */
+    private function render_availability_info($info, renderer_base $output): string {
+        if (is_string($info)) {
+            return \core_availability\info::format_info($info, $this->format->get_course());
+        }
+
+        $renderable = new \core_availability\output\availability_info($info);
+        $templatedata = $renderable->export_for_template($output);
+        $text = $output->render_from_template('core_availability/availability_info', $templatedata);
+        return \core_availability\info::format_info($text, $this->format->get_course());
+    }
+}

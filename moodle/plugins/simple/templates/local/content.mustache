@@ -1,0 +1,260 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template format_simple/local/content
+
+    Main course content layout for the Simple format.
+    Renders a custom navigation panel on the left and section content on the right.
+
+    Context variables required for this template:
+    * courseid - The course ID.
+    * editing - Whether editing mode is on.
+    * hassections - Whether there are any visible sections.
+    * navitems - Array of navigation items for the sidebar.
+    * sections - Array of section content data.
+    * activesection - The currently active section number.
+
+    @package    format_simple
+    @copyright  2025 South African Theological Seminary <ict@sats.ac.za>
+    @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+
+    Example context (json):
+    {
+        "courseid": 2,
+        "editing": false,
+        "hassections": true,
+        "activesection": 1,
+        "sectionreturn": 0,
+        "navitems": [{"num": 1, "name": "Unit 1", "isactive": true, "progress": "notstarted", "percentage": 0}],
+        "sections": []
+    }
+}}
+
+<script>
+(function() {
+    try {
+        var theme = "{{darktheme}}";
+        var resolved = theme;
+        if (theme === "auto") {
+            var toMins = function(t) {
+                var p = t.split(":");
+                return (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
+            };
+            var now = new Date();
+            var mins = now.getHours() * 60 + now.getMinutes();
+            var start = toMins("{{darkstart}}");
+            var end = toMins("{{darkend}}");
+            var isdark = start < end ? (mins >= start && mins < end) : (mins >= start || mins < end);
+            resolved = isdark ? "dark" : "light";
+        }
+        document.body.setAttribute("data-simple-theme", resolved);
+    } catch (e) {
+        // CSS falls back to light on any failure.
+    }
+})();
+</script>
+<div id="format-simple-root"
+     class="format-simple-wrapper"
+     data-courseid="{{courseid}}"
+     data-activesection="{{activesection}}"
+     {{#editing}}data-editing="true"{{/editing}}>
+
+    {{#hassections}}
+    {{! ---- Navigation Panel ---- }}
+    <nav class="simple-nav" aria-label="{{str_selectunit}}" role="navigation">
+        <div class="simple-nav-inner">
+            {{#hassection0}}
+            {{#section0nav}}
+            <button class="simple-nav-item simple-nav-item-section0 {{#isactive}}is-active{{/isactive}}"
+                    data-section="0"
+                    data-sectionid="{{id}}"
+                    type="button"
+                    aria-current="{{#isactive}}true{{/isactive}}{{^isactive}}false{{/isactive}}"
+                    aria-label="{{name}}">
+                <span class="simple-nav-indicator simple-nav-indicator-info" aria-hidden="true">
+                    <i class="fa {{indexicon}}"></i>
+                    {{#hassection0unread}}
+                    <span class="simple-unread-badge" title="{{section0unreadlabel}}">{{section0unread}}</span>
+                    {{/hassection0unread}}
+                </span>
+                <span class="simple-nav-label">{{name}}</span>
+                <span class="simple-nav-callout" aria-hidden="true"></span>
+            </button>
+            {{/section0nav}}
+            <div class="simple-nav-separator" aria-hidden="true"></div>
+            {{/hassection0}}
+            {{#navitems}}
+            <button class="simple-nav-item {{#isactive}}is-active{{/isactive}} {{#isrestricted}}is-restricted{{/isrestricted}}"
+                    data-section="{{num}}"
+                    data-sectionid="{{id}}"
+                    type="button"
+                    {{#isrestricted}}aria-disabled="true"{{/isrestricted}}
+                    aria-current="{{#isactive}}true{{/isactive}}{{^isactive}}false{{/isactive}}"
+                    aria-label="{{name}}">
+
+                {{! Progress indicator }}
+                <span class="simple-nav-indicator" aria-hidden="true">
+                    {{#isrestricted}}
+                    {{! Padlock icon }}
+                    <svg class="simple-progress-svg" viewBox="0 0 36 36" width="36" height="36">
+                        <circle class="simple-progress-bg" cx="18" cy="18" r="16"
+                                fill="none" stroke="#d1d5db" stroke-width="2.5"/>
+                        <text x="18" y="22" text-anchor="middle" class="simple-lock-icon">&#xf023;</text>
+                    </svg>
+                    {{/isrestricted}}
+
+                    {{^isrestricted}}
+                        {{#iscomplete}}
+                        {{! Green check circle }}
+                        <svg class="simple-progress-svg is-complete" viewBox="0 0 36 36" width="36" height="36">
+                            <circle cx="18" cy="18" r="16"
+                                    fill="#10b981" stroke="none"/>
+                            <polyline points="12,18 16,22 24,14"
+                                      fill="none" stroke="#ffffff" stroke-width="2.5"
+                                      stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        {{/iscomplete}}
+
+                        {{#isinprogress}}
+                        {{! Progress ring with percentage }}
+                        <svg class="simple-progress-svg is-inprogress" viewBox="0 0 36 36" width="36" height="36">
+                            <circle class="simple-progress-bg" cx="18" cy="18" r="16"
+                                    fill="none" stroke="#e5e7eb" stroke-width="2.5"/>
+                            <circle class="simple-progress-bar" cx="18" cy="18" r="16"
+                                    fill="none" stroke="#10b981" stroke-width="2.5"
+                                    stroke-linecap="round"
+                                    stroke-dasharray="{{circumference}}"
+                                    stroke-dashoffset="{{dashoffset}}"
+                                    transform="rotate(-90 18 18)"/>
+                            {{^hasindexicon}}
+                            <text x="18" y="21" text-anchor="middle"
+                                  class="simple-progress-text">{{percentage}}%</text>
+                            {{/hasindexicon}}
+                        </svg>
+                        {{#hasindexicon}}
+                        <i class="fa {{indexicon}} simple-nav-ringicon"></i>
+                        {{/hasindexicon}}
+                        {{/isinprogress}}
+
+                        {{#isnotstarted}}
+                        {{#hastracking}}
+                        {{! Nothing done yet, but there is something to do }}
+                        <svg class="simple-progress-svg is-notstarted" viewBox="0 0 36 36" width="36" height="36">
+                            <circle cx="18" cy="18" r="16"
+                                    fill="none" stroke="#d1d5db" stroke-width="2.5"/>
+                        </svg>
+                        {{#hasindexicon}}
+                        <i class="fa {{indexicon}} simple-nav-ringicon"></i>
+                        {{/hasindexicon}}
+                        {{/hastracking}}
+
+                        {{^hastracking}}
+                        {{! Nothing here is tracked, so there is no progress to report. A filled
+                            dot says as much without implying work outstanding. }}
+                        {{#hasindexicon}}
+                        <i class="fa {{indexicon}} simple-nav-plainicon"></i>
+                        {{/hasindexicon}}
+                        {{^hasindexicon}}
+                        <svg class="simple-progress-svg is-untracked" viewBox="0 0 36 36" width="36" height="36">
+                            <circle cx="18" cy="18" r="7" fill="#d1d5db" stroke="none"/>
+                        </svg>
+                        {{/hasindexicon}}
+                        {{/hastracking}}
+                        {{/isnotstarted}}
+                    {{/isrestricted}}
+                </span>
+
+                {{! Section name }}
+                <span class="simple-nav-label">{{name}}</span>
+
+                {{! Callout arrow (visible when active) }}
+                <span class="simple-nav-callout" aria-hidden="true"></span>
+
+                {{! Restriction popover content (hidden, shown on hover) }}
+                {{#isrestricted}}
+                <div class="simple-restriction-popover" role="tooltip">
+                    {{{availabilityinfo}}}
+                </div>
+                {{/isrestricted}}
+            </button>
+
+            {{! The active unit lists the activities its progress ring is counting. A sibling of
+                the button rather than a child, because a button cannot contain buttons. }}
+            {{#hascompletionitems}}
+            <ul class="simple-nav-cmlist {{#isactive}}is-active{{/isactive}}"
+                data-for="navcmlist"
+                data-section="{{num}}"
+                {{^isactive}}hidden{{/isactive}}>
+                {{#completionitems}}
+                <li class="simple-nav-cmitem">
+                    <button class="simple-nav-cmlink"
+                            type="button"
+                            data-action="scroll-to-cm"
+                            data-cmid="{{id}}"
+                            data-completion-tracked="1"
+                            data-completion-state="{{completionstate}}">
+                        <span class="simple-cm-dot {{#ismanualcompletion}}is-manual{{/ismanualcompletion}}{{^ismanualcompletion}}is-conditional{{/ismanualcompletion}} {{#iscomplete}}is-complete{{/iscomplete}}"
+                              aria-hidden="true"></span>
+                        <span class="simple-nav-cmname">{{name}}</span>
+                        <span class="visually-hidden">
+                            {{#iscomplete}}{{#str}}completedname, format_simple, {{name}}{{/str}}{{/iscomplete}}
+                            {{^iscomplete}}{{#str}}notcompletedname, format_simple, {{name}}{{/str}}{{/iscomplete}}
+                        </span>
+                    </button>
+                </li>
+                {{/completionitems}}
+            </ul>
+            {{/hascompletionitems}}
+            {{/navitems}}
+        </div>
+
+        {{#editing}}
+        {{#hasaddsection}}
+        <div class="simple-nav-addsection">
+            {{{addsectionhtml}}}
+        </div>
+        {{/hasaddsection}}
+        {{/editing}}
+    </nav>
+
+    {{! ---- Content Area ---- }}
+    <div class="simple-content" role="main">
+        <div data-for="course_sectionlist">
+            {{#sections}}
+                {{> format_simple/local/content/section }}
+            {{/sections}}
+        </div>
+    </div>
+    {{/hassections}}
+
+    {{^hassections}}
+    <div class="simple-empty">
+        <p>{{#str}}nocoursesections, format_simple{{/str}}</p>
+    </div>
+    {{/hassections}}
+
+</div>
+
+{{! Initialise the JavaScript modules. }}
+{{#js}}
+require(['core_courseformat/local/content'], function(component) {
+    component.init('#page', {}, {{sectionreturn}}, {{#pagesectionid}}{{.}}{{/pagesectionid}}{{^pagesectionid}}null{{/pagesectionid}});
+});
+require(['format_simple/simple'], function(Simple) {
+    Simple.init('format-simple-root');
+});
+{{/js}}
