@@ -1,0 +1,8 @@
+.env
+moodle/src/
+*.sql
+*.sql.gz
+laravel/vendor/
+laravel/node_modules/
+laravel/.env
+laravel/public/build/
