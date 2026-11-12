@@ -43,3 +43,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::patch('/noticias/{noticia}/estado', [AdminNoticiaController::class, 'toggleEstado'])->name('noticias.estado');
     });
 });
+
+// Cualquier URL inexistente: pasa por el grupo "web" (sesión) para que la página 404
+// pueda mostrar la barra de navegación con el botón de iniciar sesión.
+Route::fallback(fn () => abort(404));

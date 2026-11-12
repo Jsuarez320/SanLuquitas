@@ -4,8 +4,6 @@
 
 @php
     $contacto = config('sanluquitas.contacto');
-    // Clases comunes de los campos del formulario.
-    $campo = 'mt-1 block w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-800 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary';
 @endphp
 
 @section('content')
@@ -30,27 +28,10 @@
                   class="space-y-5 rounded-2xl bg-white p-6 shadow-md shadow-slate-200/60 ring-1 ring-slate-100 sm:p-8">
                 @csrf
 
-                @foreach ([['nombre', 'Nombre', 'text', 'name'], ['correo', 'Correo electrónico', 'email', 'email'], ['asunto', 'Asunto', 'text', 'off']] as [$id, $etiqueta, $tipo, $auto])
-                    <div>
-                        <label for="{{ $id }}" class="block text-sm font-semibold text-primary-dark">{{ $etiqueta }}</label>
-                        <input id="{{ $id }}" name="{{ $id }}" type="{{ $tipo }}" value="{{ old($id) }}" required autocomplete="{{ $auto }}"
-                               @error($id) aria-invalid="true" aria-describedby="{{ $id }}-error" @enderror
-                               class="{{ $campo }} @error($id) !border-red-600 @enderror">
-                        @error($id)
-                            <p id="{{ $id }}-error" class="mt-1 text-sm text-red-700">{{ $message }}</p>
-                        @enderror
-                    </div>
-                @endforeach
-
-                <div>
-                    <label for="mensaje" class="block text-sm font-semibold text-primary-dark">Mensaje</label>
-                    <textarea id="mensaje" name="mensaje" rows="5" required
-                              @error('mensaje') aria-invalid="true" aria-describedby="mensaje-error" @enderror
-                              class="{{ $campo }} @error('mensaje') !border-red-600 @enderror">{{ old('mensaje') }}</textarea>
-                    @error('mensaje')
-                        <p id="mensaje-error" class="mt-1 text-sm text-red-700">{{ $message }}</p>
-                    @enderror
-                </div>
+                <x-campo name="nombre" label="Nombre" required autocomplete="name" />
+                <x-campo name="correo" label="Correo electrónico" type="email" required autocomplete="email" />
+                <x-campo name="asunto" label="Asunto" required autocomplete="off" />
+                <x-campo name="mensaje" label="Mensaje" tipo="textarea" :rows="5" required />
 
                 <button type="submit" class="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 font-heading text-sm font-semibold text-primary-dark transition hover:bg-accent-dark">
                     Enviar mensaje <x-icon name="arrow-right" class="h-4 w-4" />

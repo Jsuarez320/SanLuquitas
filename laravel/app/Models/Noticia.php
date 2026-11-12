@@ -81,9 +81,22 @@ class Noticia extends Model
 
     protected function imagen(): Attribute
     {
-        return Attribute::get(fn () => $this->imagen_path
-            ? Storage::disk('public')->url($this->imagen_path)
-            : 'https://placehold.co/800x500/1E5AA8/ffffff?text='.urlencode($this->categoria));
+        return Attribute::get(function () {
+            if (! $this->imagen_path) {
+                return 'https://placehold.co/800x500/1E5AA8/ffffff?text='.urlencode($this->categoria ?? '');
+            }
+
+            // Imágenes incluidas con el sitio (public/images/...) o subidas desde el admin (disco "public").
+            return $this->tieneImagenIncluida()
+                ? asset($this->imagen_path)
+                : Storage::disk('public')->url($this->imagen_path);
+        });
+    }
+
+    /** True si la imagen es de public/images (parte del sitio) y no una subida desde el admin. */
+    public function tieneImagenIncluida(): bool
+    {
+        return str_starts_with((string) $this->imagen_path, 'images/');
     }
 
     /** Cuerpo dividido en párrafos (líneas en blanco). */

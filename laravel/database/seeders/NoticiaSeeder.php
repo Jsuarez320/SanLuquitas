@@ -71,11 +71,26 @@ class NoticiaSeeder extends Seeder
                 ]],
         ];
 
+        // Imagen de cada noticia (archivos en public/images/noticias).
+        $imagenes = [
+            'feria-de-ciencias-2026' => 'jardin-escolar',
+            'nuevo-curso-programacion-primaria' => 'estudio-porche',
+            'jornada-deportiva-institucional' => 'patio-montanas',
+            'inscripciones-abiertas-2027' => 'retrato-escuela',
+            'reconocimiento-docentes-destacados' => 'aula',
+            'taller-padres-tecnologia-segura' => 'huerto',
+            'comunicado-horario-semana-santa' => 'recreo-rural',
+            'comunicado-reunion-padres-noviembre' => 'amigos-patio',
+            'borrador-ceremonia-graduacion-2026' => 'taller-arte-aire-libre',
+            'borrador-nuevo-laboratorio-robotica' => 'taller-arte-rural',
+            'programada-feria-del-libro-2027' => 'lectura-arbol',
+        ];
+
         foreach ($noticias as $fila) {
             // El 8.º valor (estado) es opcional: por defecto "publicado".
             [$slug, $titulo, $tipo, $categoria, $fecha, $extracto, $parrafos, $estado] = array_pad($fila, 8, 'publicado');
 
-            Noticia::firstOrCreate(['slug' => $slug], [
+            $noticia = Noticia::firstOrCreate(['slug' => $slug], [
                 'titulo' => $titulo,
                 'tipo' => $tipo,
                 'categoria' => $categoria,
@@ -84,6 +99,11 @@ class NoticiaSeeder extends Seeder
                 'estado' => $estado,
                 'publicada_en' => $fecha,
             ]);
+
+            // Solo rellena la imagen si está vacía: no pisa una que hayas subido desde el admin.
+            if (! $noticia->imagen_path && isset($imagenes[$slug])) {
+                $noticia->update(['imagen_path' => "images/noticias/{$imagenes[$slug]}.webp"]);
+            }
         }
     }
 }

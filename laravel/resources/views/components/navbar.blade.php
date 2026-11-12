@@ -16,7 +16,7 @@
     <nav class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8" aria-label="Navegación principal">
         {{-- Logo --}}
         <a href="{{ route('inicio') }}" class="flex items-center gap-2" aria-label="San Luquitas, ir al inicio">
-            <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary font-heading text-lg font-bold text-white">SL</span>
+            <x-isotipo class="h-10 w-10" />
             <span class="font-heading text-lg font-bold text-primary-dark">San Luquitas</span>
         </a>
 
@@ -32,6 +32,16 @@
                 </li>
             @endforeach
             <li class="ml-2">
+                @auth
+                    <x-button :href="route('admin.dashboard')" variant="outline" class="!py-2">Ir al panel</x-button>
+                @else
+                    {{-- Sin JavaScript lleva a la página de login; con JavaScript abre el modal --}}
+                    <x-button :href="route('admin.login')" variant="outline" class="!py-2" x-on:click.prevent="$dispatch('abrir-login')">
+                        Iniciar sesión
+                    </x-button>
+                @endauth
+            </li>
+            <li>
                 <x-button :href="config('sanluquitas.moodle_url')" variant="accent" :external="true" class="!py-2">
                     Campus Virtual
                 </x-button>
@@ -59,7 +69,14 @@
                     </a>
                 </li>
             @endforeach
-            <li class="pt-2">
+            <li class="space-y-2 pt-2">
+                @auth
+                    <x-button :href="route('admin.dashboard')" variant="outline" class="w-full">Ir al panel</x-button>
+                @else
+                    <x-button :href="route('admin.login')" variant="outline" class="w-full" x-on:click.prevent="abierto = false; $dispatch('abrir-login')">
+                        Iniciar sesión
+                    </x-button>
+                @endauth
                 <x-button :href="config('sanluquitas.moodle_url')" variant="accent" :external="true" class="w-full">
                     Campus Virtual
                 </x-button>

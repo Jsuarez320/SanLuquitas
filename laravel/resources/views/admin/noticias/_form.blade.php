@@ -3,8 +3,6 @@
     $metodo ('POST' | 'PUT'), $boton (texto del botón principal).
 --}}
 @php
-    $campo = 'mt-1 block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-800 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary';
-    $error = fn ($c) => $errors->has($c) ? '!border-red-600' : '';
     $tipoActual = old('tipo', $noticia->tipo);
     $estadoActual = old('estado', $noticia->estado);
 @endphp
@@ -27,37 +25,20 @@
 
     {{-- Columna principal --}}
     <div class="space-y-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 motion-safe:animate-fade-up sm:p-8" style="animation-delay: 60ms">
-        <div>
-            <label for="titulo" class="block text-sm font-semibold text-primary-dark">Título</label>
-            <input id="titulo" name="titulo" type="text" maxlength="150" required value="{{ old('titulo', $noticia->titulo) }}"
-                   placeholder="Ej: Inscripciones abiertas para 2027"
-                   @error('titulo') aria-invalid="true" aria-describedby="titulo-error" @enderror
-                   class="{{ $campo }} {{ $error('titulo') }}">
-            @error('titulo') <p id="titulo-error" class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
-        </div>
+        <x-campo name="titulo" label="Título" :value="$noticia->titulo" maxlength="150" required />
 
-        <div>
-            <div class="flex items-end justify-between">
-                <label for="extracto" class="block text-sm font-semibold text-primary-dark">Resumen</label>
-                <span class="text-xs tabular-nums" :class="extracto.length > 200 ? 'font-semibold text-red-700' : 'text-slate-400'" aria-hidden="true">
+        <x-campo name="extracto" label="Resumen" tipo="textarea" :rows="3" :value="$noticia->extracto" maxlength="220" required x-model="extracto"
+                 ayuda="Una o dos frases: se muestran en las tarjetas del sitio.">
+            <x-slot:trailing>
+                <span class="pointer-events-none absolute bottom-2 right-3 text-xs tabular-nums" aria-hidden="true"
+                      :class="extracto.length > 200 ? 'font-semibold text-red-700' : 'text-slate-400'">
                     <span x-text="extracto.length"></span>/220
                 </span>
-            </div>
-            <textarea id="extracto" name="extracto" rows="2" maxlength="220" required x-model="extracto"
-                      placeholder="Una o dos frases que aparecerán en las tarjetas del sitio"
-                      @error('extracto') aria-invalid="true" aria-describedby="extracto-error" @enderror
-                      class="{{ $campo }} {{ $error('extracto') }}">{{ old('extracto', $noticia->extracto) }}</textarea>
-            @error('extracto') <p id="extracto-error" class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
-        </div>
+            </x-slot:trailing>
+        </x-campo>
 
-        <div>
-            <label for="cuerpo" class="block text-sm font-semibold text-primary-dark">Contenido</label>
-            <p id="cuerpo-ayuda" class="text-xs text-slate-500">Separa los párrafos con una línea en blanco.</p>
-            <textarea id="cuerpo" name="cuerpo" rows="12" required aria-describedby="cuerpo-ayuda @error('cuerpo') cuerpo-error @enderror"
-                      @error('cuerpo') aria-invalid="true" @enderror
-                      class="{{ $campo }} {{ $error('cuerpo') }}">{{ old('cuerpo', $noticia->cuerpo) }}</textarea>
-            @error('cuerpo') <p id="cuerpo-error" class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
-        </div>
+        <x-campo name="cuerpo" label="Contenido" tipo="textarea" :rows="12" :value="$noticia->cuerpo" required
+                 ayuda="Separa los párrafos con una línea en blanco." />
     </div>
 
     {{-- Columna lateral --}}
@@ -96,27 +77,17 @@
             </fieldset>
 
             <div>
-                <label for="categoria" class="block text-sm font-semibold text-primary-dark">Categoría</label>
-                <input id="categoria" name="categoria" type="text" maxlength="60" required list="categorias" value="{{ old('categoria', $noticia->categoria) }}"
-                       placeholder="Ej: Académico"
-                       @error('categoria') aria-invalid="true" aria-describedby="categoria-error" @enderror
-                       class="{{ $campo }} {{ $error('categoria') }}">
+                <x-campo name="categoria" label="Categoría" :value="$noticia->categoria" maxlength="60" list="categorias" required />
                 <datalist id="categorias">
                     @foreach (['Académico', 'Admisiones', 'Campus Virtual', 'Comunidad', 'Formación', 'Institucional'] as $c)
                         <option value="{{ $c }}">
                     @endforeach
                 </datalist>
-                @error('categoria') <p id="categoria-error" class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
             </div>
 
-            <div>
-                <label for="publicada_en" class="block text-sm font-semibold text-primary-dark">Fecha de publicación</label>
-                <input id="publicada_en" name="publicada_en" type="date" required value="{{ old('publicada_en', $noticia->publicada_en?->toDateString()) }}"
-                       @error('publicada_en') aria-invalid="true" aria-describedby="fecha-error" @enderror
-                       class="{{ $campo }} {{ $error('publicada_en') }}">
-                <p class="mt-1 text-xs text-slate-500">Si es una fecha futura, se mostrará ese día.</p>
-                @error('publicada_en') <p id="fecha-error" class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
-            </div>
+            {{-- El campo de fecha nunca está "vacío" (muestra dd/mm/aaaa), por eso la etiqueta queda fija arriba --}}
+            <x-campo name="publicada_en" label="Fecha de publicación" type="date" :fija="true" :value="$noticia->publicada_en?->toDateString()" required
+                     ayuda="Si es una fecha futura, se mostrará ese día." />
         </div>
 
         {{-- Imagen --}}

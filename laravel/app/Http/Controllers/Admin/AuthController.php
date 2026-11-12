@@ -57,6 +57,6 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('admin.login')->with('exito', 'Sesión cerrada.');
+        return redirect()->route('inicio');
     }
 }

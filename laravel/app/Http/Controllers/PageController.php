@@ -37,10 +37,10 @@ class PageController extends Controller
             ],
             // Nombres ficticios de ejemplo.
             'directivos' => [
-                ['nombre' => 'María Fernanda Ortiz', 'cargo' => 'Rectora'],
-                ['nombre' => 'Carlos Andrés Medina', 'cargo' => 'Coordinador académico'],
-                ['nombre' => 'Laura Patricia Gómez', 'cargo' => 'Coordinadora de convivencia'],
-                ['nombre' => 'Jorge Iván Ramírez', 'cargo' => 'Director de tecnología'],
+                ['nombre' => 'María Fernanda Ortiz', 'cargo' => 'Rectora', 'foto' => 'images/nosotros/equipo/rectora.webp'],
+                ['nombre' => 'Carlos Andrés Medina', 'cargo' => 'Coordinador académico', 'foto' => 'images/nosotros/equipo/academico.webp'],
+                ['nombre' => 'Laura Patricia Gómez', 'cargo' => 'Coordinadora de convivencia', 'foto' => 'images/nosotros/equipo/convivencia.webp'],
+                ['nombre' => 'Jorge Iván Ramírez', 'cargo' => 'Director de tecnología', 'foto' => 'images/nosotros/equipo/director.webp'],
             ],
         ]);
     }

@@ -5,9 +5,10 @@
 @section('content')
     {{-- Hero con imagen de fondo y overlay --}}
     <section class="on-dark relative isolate overflow-hidden bg-primary-dark">
-        <img src="https://placehold.co/1920x1080/1E5AA8/ffffff?text=Colegio+San+Luquitas" alt="" aria-hidden="true"
-             class="absolute inset-0 -z-20 h-full w-full object-cover">
-        <div class="absolute inset-0 -z-10 bg-gradient-to-r from-primary-dark/95 via-primary-dark/80 to-primary-dark/40"></div>
+        <img src="{{ asset('images/inicio/fachada.jpg') }}" alt="" aria-hidden="true" width="1600" height="900" fetchpriority="high"
+             class="absolute inset-0 -z-20 h-full w-full object-cover object-[50%_60%]">
+        {{-- Degradado suave: algo más oscuro a la izquierda (donde va el texto) y casi transparente a la derecha --}}
+        <div class="absolute inset-0 -z-10 bg-gradient-to-r from-primary-dark/85 from-10% via-primary-dark/50 via-55% to-primary-dark/5"></div>
 
         <div class="mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8 lg:py-40">
             <p class="font-heading text-sm font-semibold uppercase tracking-widest text-accent">Colegio San Luquitas</p>

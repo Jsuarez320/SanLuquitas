@@ -121,6 +121,20 @@ class AdminNoticiasTest extends TestCase
         Storage::disk('public')->assertMissing($n->imagen_path);
     }
 
+    public function test_imagen_incluida_en_el_sitio_se_muestra_y_no_se_borra(): void
+    {
+        $this->actingAs($this->admin());
+        $n = Noticia::create($this->datos() + ['imagen_path' => 'images/noticias/aula.webp']);
+
+        $this->assertStringEndsWith('/images/noticias/aula.webp', $n->imagen);
+        $this->assertTrue($n->tieneImagenIncluida());
+
+        $this->delete("/admin/noticias/{$n->id}");
+
+        $this->assertModelMissing($n);
+        $this->assertFileExists(public_path('images/noticias/aula.webp'));
+    }
+
     public function test_listado_filtra_por_texto_tipo_y_estado(): void
     {
         $this->actingAs($this->admin());

@@ -9,7 +9,7 @@
         {{-- Marca --}}
         <div>
             <a href="{{ route('inicio') }}" class="flex items-center gap-2">
-                <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-accent font-heading text-lg font-bold text-primary-dark">SL</span>
+                <x-isotipo :tile="true" class="h-10 w-10" />
                 <span class="font-heading text-lg font-bold text-white">San Luquitas</span>
             </a>
             <p class="mt-4 text-sm leading-relaxed">Educamos para transformar. Formación integral con excelencia, valores y tecnología.</p>

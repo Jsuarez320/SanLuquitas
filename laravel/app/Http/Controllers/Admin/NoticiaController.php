@@ -96,7 +96,8 @@ class NoticiaController extends Controller
 
     private function borrarImagen(Noticia $noticia): void
     {
-        if ($noticia->imagen_path) {
+        // Las imágenes incluidas con el sitio (public/images) no se borran: solo las subidas desde el admin.
+        if ($noticia->imagen_path && ! $noticia->tieneImagenIncluida()) {
             Storage::disk('public')->delete($noticia->imagen_path);
         }
     }

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>@yield('title', 'Administración') | San Luquitas</title>
+    <x-favicon />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
@@ -25,7 +26,7 @@
         <aside class="on-dark fixed inset-y-0 left-0 z-40 w-64 -translate-x-full overflow-y-auto bg-primary-dark transition-transform lg:sticky lg:top-0 lg:h-screen lg:shrink-0 lg:translate-x-0"
                :class="{ 'translate-x-0': abierto }">
             <div class="flex h-16 items-center gap-2 px-5">
-                <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-accent font-heading font-bold text-primary-dark">SL</span>
+                <x-isotipo :tile="true" class="h-10 w-10" />
                 <span class="font-heading text-lg font-bold text-white">Admin</span>
             </div>
 

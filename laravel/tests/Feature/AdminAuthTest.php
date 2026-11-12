@@ -67,7 +67,7 @@ class AdminAuthTest extends TestCase
 
     public function test_logout(): void
     {
-        $this->actingAs($this->admin())->post('/admin/logout')->assertRedirect(route('admin.login'));
+        $this->actingAs($this->admin())->post('/admin/logout')->assertRedirect(route('inicio'));
         $this->assertGuest();
     }
 

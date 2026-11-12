@@ -21,8 +21,8 @@
                 <p>Hoy seguimos fieles a nuestra esencia: acompañar a cada niño y joven para que descubra y desarrolle todo su potencial.</p>
             </div>
         </div>
-        <img src="https://placehold.co/800x600/E2E8F0/1E5AA8?text=Nuestra+historia" alt="Fachada del colegio y estudiantes en el patio"
-             class="w-full rounded-2xl object-cover shadow-lg" loading="lazy">
+        <img src="{{ asset('images/nosotros/historia.webp') }}" alt="Estudiantes conversando y jugando en el patio, frente a la fachada del colegio" width="1200" height="675"
+             class="aspect-video w-full rounded-2xl object-cover shadow-lg" loading="lazy">
     </section>
 
     {{-- Misión, visión y valores --}}
@@ -50,9 +50,11 @@
         <x-section-title eyebrow="Equipo" title="Equipo directivo" subtitle="Las personas que lideran nuestra comunidad educativa." />
         <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             @foreach ($directivos as $directivo)
-                <div class="overflow-hidden rounded-2xl bg-white text-center shadow-md shadow-slate-200/60 ring-1 ring-slate-100">
-                    <img src="https://placehold.co/400x400/E2E8F0/1E5AA8?text=Foto" alt="Fotografía de {{ $directivo['nombre'] }}"
-                         class="aspect-square w-full object-cover" loading="lazy">
+                <div class="group overflow-hidden rounded-2xl bg-white text-center shadow-md shadow-slate-200/60 ring-1 ring-slate-100 transition hover:-translate-y-1 hover:shadow-lg">
+                    <div class="overflow-hidden">
+                        <img src="{{ asset($directivo['foto']) }}" alt="Fotografía de {{ $directivo['nombre'] }}, {{ $directivo['cargo'] }}" width="640" height="640"
+                             class="aspect-square w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
+                    </div>
                     <div class="p-5">
                         <h3 class="font-heading text-lg font-semibold text-primary-dark">{{ $directivo['nombre'] }}</h3>
                         <p class="text-sm text-slate-600">{{ $directivo['cargo'] }}</p>

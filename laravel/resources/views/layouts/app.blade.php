@@ -6,6 +6,8 @@
     <title>@yield('title', 'Colegio San Luquitas') | Educamos para transformar</title>
     <meta name="description" content="@yield('description', 'Portal institucional del Colegio San Luquitas: educación integral con excelencia académica, valores y tecnología.')">
 
+    <x-favicon />
+
     {{-- Tipografías: Poppins (títulos) e Inter (texto) --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,5 +29,8 @@
     </main>
 
     <x-footer />
+
+    {{-- Modal de inicio de sesión (se abre desde el botón de la barra de navegación) --}}
+    <x-login-modal />
 </body>
 </html>

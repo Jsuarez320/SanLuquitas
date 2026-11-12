@@ -2,9 +2,6 @@
 
 @section('title', 'Noticias y comunicados')
 
-@php
-    $campo = 'rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary';
-@endphp
 
 @section('content')
     <div class="flex flex-wrap items-end justify-between gap-4 motion-safe:animate-fade-up">
@@ -22,31 +19,20 @@
     <form method="GET" action="{{ route('admin.noticias.index') }}" role="search"
           class="mt-6 grid gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 motion-safe:animate-fade-up sm:grid-cols-[1fr_auto_auto_auto]"
           style="animation-delay: 80ms">
-        <div class="relative">
-            <label for="q" class="sr-only">Buscar por título o resumen</label>
-            <x-icon name="magnifying-glass" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input id="q" name="q" type="search" value="{{ request('q') }}" placeholder="Buscar por título o resumen"
-                   class="{{ $campo }} w-full pl-9">
-        </div>
-        <div>
-            <label for="tipo" class="sr-only">Tipo</label>
-            <select id="tipo" name="tipo" onchange="this.form.requestSubmit()" class="{{ $campo }} w-full">
-                <option value="">Todos los tipos</option>
-                @foreach (\App\Models\Noticia::TIPOS as $valor => $etiqueta)
-                    <option value="{{ $valor }}" @selected(request('tipo') === $valor)>{{ $etiqueta }}s</option>
-                @endforeach
-            </select>
-        </div>
-        <div>
-            <label for="estado" class="sr-only">Estado</label>
-            <select id="estado" name="estado" onchange="this.form.requestSubmit()" class="{{ $campo }} w-full">
-                <option value="">Todos los estados</option>
-                @foreach (\App\Models\Noticia::ESTADOS as $valor => $etiqueta)
-                    <option value="{{ $valor }}" @selected(request('estado') === $valor)>{{ $etiqueta }}s</option>
-                @endforeach
-            </select>
-        </div>
-        <button type="submit" class="rounded-full bg-primary px-5 py-2.5 font-heading text-sm font-semibold text-white transition hover:bg-primary-dark active:scale-95">Buscar</button>
+        <x-campo name="q" label="Buscar por título o resumen" type="search" :value="request('q')" />
+        <x-campo name="tipo" label="Tipo" tipo="select" :fija="true" onchange="this.form.requestSubmit()" class="sm:w-48">
+            <option value="">Todos</option>
+            @foreach (\App\Models\Noticia::TIPOS as $valor => $etiqueta)
+                <option value="{{ $valor }}" @selected(request('tipo') === $valor)>{{ $etiqueta }}s</option>
+            @endforeach
+        </x-campo>
+        <x-campo name="estado" label="Estado" tipo="select" :fija="true" onchange="this.form.requestSubmit()" class="sm:w-48">
+            <option value="">Todos</option>
+            @foreach (\App\Models\Noticia::ESTADOS as $valor => $etiqueta)
+                <option value="{{ $valor }}" @selected(request('estado') === $valor)>{{ $etiqueta }}s</option>
+            @endforeach
+        </x-campo>
+        <button type="submit" class="rounded-full bg-primary px-5 py-2.5 font-heading text-sm font-semibold text-white transition hover:bg-primary-dark active:scale-95 sm:self-start sm:py-3.5">Buscar</button>
     </form>
 
     @if ($noticias->isEmpty())
